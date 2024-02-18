@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,6 +8,13 @@ public class CanvasScript : MonoBehaviour {
 
 	// References
 	public GameScript GS;
+    // While paused
+    public bool isPaused = false;
+    public float ShowBars = 0f;
+    public Transform PausedWindow;
+    public Image[] Bars;
+    public ButtonScript[] pButtons;
+    string pOptions;
     // While Playing
     public Camera MainCamera;
     public PlayerScript player;
@@ -35,7 +43,6 @@ public class CanvasScript : MonoBehaviour {
 	public Image FlashImage;
 	public float DisappearSpeed = 1f;
     // Flash
-    float StartingTextDisplay = 5f;
     // Radar/Map
     public GameObject Radar;
     public GameObject Map;
@@ -80,18 +87,113 @@ public class CanvasScript : MonoBehaviour {
 
         Music();
         FlashImage.color = Color32.Lerp (FlashImage.color, new Color32((byte)FlashImage.color.r, (byte)FlashImage.color.g, (byte)FlashImage.color.b, 0), DisappearSpeed * (Time.unscaledDeltaTime * 100f));
-        if(player != null && player.Intro <= 0f){
+        if(isPaused){
+            Paused(true);
+            Alive();
+            Intro();
+            Time.timeScale = 0f;
+        } else if(player != null && player.Intro <= 0f){
+            Paused();
             Alive(true);
             Intro();
             Time.timeScale = 1f;
         } else if(player != null && player.Intro > 0f){
+            Paused();
             Alive();
             Intro(true);
             Time.timeScale = 1f;
         } else {
+            Paused();
             Alive();
             Intro();
             Time.timeScale = 1f;
+        }
+
+        if(ShowBars > 0f){
+            Bars[0].color = Bars[1].color = new Color(0f,0f,0f,ShowBars);
+            ShowBars -= Time.unscaledDeltaTime;
+        } else if (Bars[0].color.a > 0f){
+            Bars[0].color = Bars[1].color = new Color(0f,0f,0f,0f);
+        }
+
+        if(Input.GetKeyDown(KeyCode.Escape) && player)
+            isPaused = !isPaused;
+
+    }
+
+    void Paused(bool view = false){
+
+        if(view){
+
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
+
+            PausedWindow.localScale = Vector3.one;
+            ShowBars = Mathf.MoveTowards(ShowBars, 1.1f, Time.unscaledDeltaTime*2f);
+
+            string[] buttonStuff;
+            switch(pOptions){
+                case "Options": buttonStuff = new string[]{"222202", "", "", "", "", "", ""}; break;
+                case "Quit": buttonStuff = new string[]{"000110", "", "unsure", "", "quityes", "quitno", ""}; break;
+                default: buttonStuff = new string[]{"011010", "", "res", "opt", "", "quit", ""}; break;
+            }
+
+            if(pOptions == "Options"){
+                GS.OptionsButtons(pButtons, pButtons[5]);
+                if(GS.OptionsChoice == "-1"){
+                    GS.OptionsChoice = "";
+                    pOptions = "";
+                }
+            }
+
+            for(int cb = 0; cb < 6; cb++){
+                char al = buttonStuff[0][cb];
+                ButtonScript getB = pButtons[cb];
+                Text textB = getB.GetComponent<Text>();
+                int click = 0; if(getB.IsSelected && Input.GetMouseButtonDown(0)) click = 1;
+                if(al == '1'){
+                    getB.IsActive = true;
+                    switch(buttonStuff[cb+1]){
+
+                        case "res": 
+                            textB.text = GS.SetText("Resume", "Wznów grę"); 
+                            if(click == 1) isPaused = false;
+                            break;
+                        case "opt": 
+                            textB.text = GS.SetText("Options", "Opcje"); 
+                            if(click == 1) pOptions = "Options";
+                            break;
+                        case "quit": 
+                            textB.text = GS.SetText("Quit", "Wyjdź"); 
+                            if(click == 1) pOptions = "Quit";
+                            break;
+
+                        case "quityes": 
+                            textB.text = GS.SetText("Yes", "Tak"); 
+                            if(click == 1) {
+                                isPaused = false;
+                                RS.State = "Quit1";
+                            }
+                            break;
+                        case "quitno": 
+                            textB.text = GS.SetText("No", "Nie"); 
+                            if(click == 1) pOptions = "";
+                            break;
+
+                    }
+                } else if (al == '0'){
+                    getB.IsActive = false;
+                    switch(buttonStuff[cb+1]){
+                        case "": textB.text = GS.SetText("", ""); break;
+                        case "unsure": textB.text = GS.SetText("You wanna go back? You'll need to redo the level", "Chcesz wrócić? Będziesz musiał powtórzyć ten poziom"); break;
+                    }
+                }
+            }
+
+        } else {
+
+            PausedWindow.localScale = Vector3.zero;
+
         }
 
     }
@@ -99,6 +201,8 @@ public class CanvasScript : MonoBehaviour {
     void Intro(bool view = false){
 
         if(view){
+            ShowBars = 1.5f;
+
             if(IntroTime > 0f){
                 IntroTime -= Time.deltaTime;
             } else {
@@ -216,7 +320,10 @@ public class CanvasScript : MonoBehaviour {
                 Cursor.visible = false;
                 Cursor.lockState = CursorLockMode.Locked;
 
-                SteeringCircle.rectTransform.anchoredPosition = Vector2.zero;
+                SteeringCircle.rectTransform.anchorMin = SteeringCircle.rectTransform.anchorMax = Vector2.one/2f;
+                SteeringCircle.rectTransform.anchoredPosition += new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y") * -player.Inverted)*10f;
+    			SteeringCircle.rectTransform.anchoredPosition = Vector2.Lerp(SteeringCircle.rectTransform.anchoredPosition, Vector2.zero, Time.unscaledDeltaTime * 5f);
+
                 SteeringCircle.GetComponent<Image>().color = new Color(1f,1f,1f, Vector3.Angle(player.transform.forward, player.PointThere.forward) / 10f);
 
             } else {
@@ -224,9 +331,8 @@ public class CanvasScript : MonoBehaviour {
                 Cursor.visible = false;
                 Cursor.lockState = CursorLockMode.Confined;
 
-                SteeringCircle.rectTransform.anchorMin = new Vector2 (Input.mousePosition.x / Screen.width, Input.mousePosition.y / Screen.height);
-	    		SteeringCircle.rectTransform.anchorMax = new Vector2 (Input.mousePosition.x / Screen.width, Input.mousePosition.y / Screen.height);
-    			SteeringCircle.rectTransform.anchoredPosition = new Vector2 (0f, 0f);
+                SteeringCircle.rectTransform.anchorMin = SteeringCircle.rectTransform.anchorMax = new Vector2 (Input.mousePosition.x / Screen.width, Input.mousePosition.y / Screen.height);
+    			SteeringCircle.rectTransform.anchoredPosition = Vector2.zero;
 
             }
 

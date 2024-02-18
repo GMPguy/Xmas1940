@@ -116,9 +116,6 @@ public class PlayerScript : MonoBehaviour {
 		Addition = GS.CurrentAddition;
 		Paint = GS.CurrentPaint;
 
-		if (GS.InvertedMouse == true) Inverted = 1f;
-		if (GS.ControlScheme == 1) ControlType = "Point";
-
 		MainCanvas = GameObject.Find ("MainCanvas");
 		PlaneSettings (1);
 		SetStats ();
@@ -129,6 +126,9 @@ public class PlayerScript : MonoBehaviour {
 	}
 
 	void FixedUpdate () {
+
+		if (GS.InvertedMouse == true) Inverted = 1f; else Inverted = -1f;
+		if (GS.ControlScheme == 1) ControlType = "Point"; else ControlType = "";
 
 		PlaneSettings (0);
 		if(Intro > 0f){

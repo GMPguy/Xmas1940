@@ -1,15 +1,18 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.PostProcessing;
 
 public class LandScript : MonoBehaviour {
 
+	GameScript GS;
 	public GameObject plains;
 
 	public string SkyColor = "Blue1";
 	public Skybox MainSkybox;
 
 	public void spawnLand(string LandType, int Size, float Seed, int SkyPick){
+		GS = GameObject.Find("GameScript").GetComponent<GameScript>();
 
 		// Land
 		switch(LandType){
@@ -72,20 +75,23 @@ public class LandScript : MonoBehaviour {
 				GameObject.Find ("MainLight").transform.eulerAngles = new Vector3 (10f, 0f, 0f);
 				break;
 			case "Orange":
-				Sky = new Color32(255, 125, 0, 255);
+				Sky = new Color32(255, 100, 0, 255);
+				SkySize = 0.5f;
 				Ambient = new Color32 (100, 50, 50, 255);
-				Fog = new Color32 (100, 50, 50, 255);
-				GameObject.Find ("MainLight").GetComponent<Light> ().color = new Color32 (125, 75, 0, 255);
+				Fog = new Color32 (173, 127, 119, 255);
+				GameObject.Find ("MainLight").GetComponent<Light> ().color = new Color32 (125, 75, 55, 255);
 				GameObject.Find ("MainLight").transform.eulerAngles = new Vector3 (30f, 180f, 0f);
 				break;
 		}
 
 		RenderSettings.ambientLight = Ambient;
-
 		RenderSettings.skybox.SetColor("_SkyTint", Sky);
 		RenderSettings.skybox.SetFloat("_AtmosphereThickness", SkySize);
 		RenderSettings.skybox.SetColor("_GroundColor", Fog);
 		RenderSettings.fogColor = GameObject.Find ("MainCamera").GetComponent<Camera> ().backgroundColor = Fog;
+
+		GS.PrevLight[0] = Fog;
+		GS.PrevLight[1] = Ambient;
 		// Lighting
 
 	}

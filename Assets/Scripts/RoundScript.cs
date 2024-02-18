@@ -34,7 +34,7 @@ public class RoundScript : MonoBehaviour {
 
 		// Set Level
 		Level = GameScript.GetComponent<GameScript> ().Level;
-        GameObject.FindObjectOfType<LandScript>().spawnLand("Plains", 20, Random.Range(1f, 999999f), 3);
+        GameObject.FindObjectOfType<LandScript>().spawnLand("Plains", 20, Random.Range(1f, 999999f), (int)Random.Range(0f, 3.9f));
         MapSize = (int)Mathf.Lerp(5000f, 15000f, (float)Level/20f);
         SetUp("Delivery", Level);
         Player.transform.position = new Vector3(0f, 500f, MapSize/-3f);
@@ -156,15 +156,17 @@ public class RoundScript : MonoBehaviour {
 					Portal.transform.GetChild (1).transform.GetChild (0).GetComponent<TextMesh> ().text = (int)((Vector3.Distance (Player.transform.position, Portal.transform.position)) / 1000f) + "km";
 				}
 			}
+        } else if(State == "Quit1"){
+            State = "Quit2";
+			GameScript.GetComponent<GameScript> ().LoadLevel("MainMenu", "CampaignMessage");
 		} else if(State == "Left1"){
-			GameScript.GetComponent<GameScript> ().LoadLevel("MainMenu");
-			GameScript.GetComponent<GameScript> ().WhichMenuWindowToLoad = "CampaignMessage";
-			State = "Left2";
+            State = "Left2";
 			GameScript.GetComponent<GameScript> ().Level += 1;
             GameScript.GetComponent<GameScript>().CurrentScore += TempScore;
             GameScript.GetComponent<GameScript>().Mooney += TempMooney;
             TempScore = 0;
             TempMooney = 0;
+			GameScript.GetComponent<GameScript> ().LoadLevel("MainMenu", "CampaignMessage");
         }
 
 	}

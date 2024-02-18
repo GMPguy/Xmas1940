@@ -48,10 +48,8 @@ public class MenuScript : MonoBehaviour {
 	public GameObject CreditsBack;
 	// Credits
 	// Options
-	string OptionsChoice = "";
-	public GameObject[] OptionButtons;
-	public GameObject OptionsBack;
-	Vector2[] LoadedResolutions;
+	public ButtonScript[] OptionButtons;
+	public ButtonScript OptionsBack;
 	// Options
 	// Campaign Main
 	public GameObject CMPlayButton;
@@ -113,7 +111,7 @@ public class MenuScript : MonoBehaviour {
 	//References
 
 	// Variables
-	string CurrentWindow = "Prologue";
+	public string CurrentWindow = "Prologue";
 	float Loading = 3f;
 	int LoadingTip = 1;
 	// variables
@@ -410,99 +408,10 @@ public class MenuScript : MonoBehaviour {
 
 		} else if (CurrentWindow == "Options") {
 
-			/*MusicVolumeButton.GetComponent<Text> ().text = GS.SetText ("Music Volume: " + (int)(GS.MusicVolume * 100f), "Głośność Muzyki: " + (int)(GS.MusicVolume * 100f));
-			VolumeButton.GetComponent<Text> ().text = GS.SetText ("Sound Effects: " + (int)(GS.AudioVolume * 100f), "Głośność Dźwięków: " + (int)(GS.AudioVolume * 100f));
-			LanguageButton.GetComponent<Text> ().text = GS.SetText ("Language: " + GS.Language, "Język: " + GS.Language);
-			InvertedButton.GetComponent<Text> ().text = GS.SetText ("Inverted Mouse: " + GS.InvertedMouse, "Odwrócona Mysz: " + GS.InvertedMouse);*/
-			OptionsBack.GetComponent<Text> ().text = GS.SetText ("Back", "Wróć");
-			string[] optiones = new string[]{};
-			switch(OptionsChoice){
-				case "Graph": 
-					if (GS.Build == "Web") optiones = new string[]{"Quality", "Fullscreen", "", ""};
-					else optiones = new string[]{"Quality", "Fullscreen", "Resolution", ""}; 
-					break;
-				case "Sound": optiones = new string[]{"Master", "Music", "SFX", ""}; break;
-				case "Game": optiones = new string[]{"Controls", "Inverted", "Language", ""}; break;
-				default: optiones = new string[]{"Graph", "Sound", "Game", ""}; break;
-			}
-
-			for(int setOpt = 0; setOpt < 4; setOpt++){
-				ButtonScript currButt = OptionButtons[setOpt].GetComponent<ButtonScript>();
-				Text currText = OptionButtons[setOpt].GetComponent<Text>();
-				int Click = 0; 
-				if(currButt.IsSelected)
-					if(Input.GetMouseButtonDown(0)) Click = 1; else if(Input.GetMouseButtonDown(1)) Click = -1;
-				
-				switch(optiones[setOpt]){
-
-					case "Graph":
-						currText.text = GS.SetText("Graphics", "Grafika");
-						if(Click==1) OptionsChoice = optiones[setOpt];
-						break;
-					case "Sound":
-						currText.text = GS.SetText("Audio", "Udźwiękowienie");
-						if(Click==1) OptionsChoice = optiones[setOpt];
-						break;
-					case "Game":
-						currText.text = GS.SetText("Game", "Gra");
-						if(Click==1) OptionsChoice = optiones[setOpt];
-						break;
-
-					case "Quality":
-						string[] quotas = new string[]{"Desperate", "Low", "Medium", "High", "Desperacka", "Niska", "Średnia", "Wysoka"};
-						currText.text = GS.SetText("Quality: " + quotas[QualitySettings.GetQualityLevel()], "Jakość: " + quotas[QualitySettings.GetQualityLevel()+4]);
-						if(Click==-1 && QualitySettings.GetQualityLevel() == 0) QualitySettings.SetQualityLevel(3);
-						else if (Click==1 && QualitySettings.GetQualityLevel() == 3) QualitySettings.SetQualityLevel(0);
-						else if(Click==1) QualitySettings.IncreaseLevel();
-						else if(Click==-1) QualitySettings.DecreaseLevel();
-						break;
-					case "Fullscreen":
-						if(Screen.fullScreen == true) currText.text = GS.SetText("Fullscreen mode: enabled", "Pełen ekran: włączony");
-						else currText.text = GS.SetText("Fullscreen mode: disabled", "Pełen ekran: wyłączony");
-						if(Click!=0) Screen.fullScreen = !Screen.fullScreen;
-						break;
-					case "Resolution":
-						currText.text = GS.SetText("Resolution: ", "Rozdzielczość: ") + GS.LoadedResolutions[GS.currentResolution].x + "x" + GS.LoadedResolutions[GS.currentResolution].y;
-						if(Click!=0) GS.currentResolution = (GS.LoadedResolutions.Length + GS.currentResolution + Click) % GS.LoadedResolutions.Length;
-						break;
-					
-					case "Master":
-						currText.text = GS.SetText("Master volume: ", "Ogólna głośność: ") + Mathf.Round(GS.Volumes[0]*100f) + "%";
-						if(Click!=0) GS.Volumes[0] = (1f + GS.Volumes[0] + 0.1f) % 1f;
-						break;
-					case "Music":
-						currText.text = GS.SetText("Music volume: ", "Głośność muzyki: ") + Mathf.Round(GS.Volumes[1]*100f) + "%";
-						if(Click!=0) GS.Volumes[1] = (1f + GS.Volumes[1] + 0.1f) % 1f;
-						break;
-					case "SFX":
-						currText.text = GS.SetText("Sound effects: ", "Efekty dźwiękowe: ") + Mathf.Round(GS.Volumes[2]*100f) + "%";
-						if(Click!=0) GS.Volumes[2] = (1f + GS.Volumes[2] + 0.1f) % 1f;
-						break;
-					
-					case "Controls":
-						string[] conts = new string[]{"Mouse and Keyboard", "Pointing", "Klawiatura i mysz", "Wskazywanie"};
-						currText.text = GS.SetText("Controls: " + conts[GS.ControlScheme], "Sterowanie: " + conts[GS.ControlScheme+2]);
-						if(Click!=0) GS.ControlScheme = (2 + GS.ControlScheme + Click) % 2;
-						break;
-					case "Inverted":
-						if(GS.InvertedMouse == true) currText.text = GS.SetText("Inverted Y axis: enabled", "Odwrócona oś Y: włączony");
-						else currText.text = GS.SetText("Inverted Y axis: disabled", "Odwrócona oś Y: wyłączony");
-						if(Click!=0) GS.InvertedMouse = !GS.InvertedMouse;
-						break;
-					case "Language":
-						currText.text = GS.SetText("Language: English", "Język: Polski");
-						if(Click!=0) 
-							if(GS.Language == "English") GS.Language = "Polski";
-							else GS.Language = "English";
-						break;
-
-					default: currText.text = ""; break;
-				}
-			}
-
-			if (OptionsBack.GetComponent<ButtonScript> ().IsSelected == true && Input.GetMouseButtonDown (0)) {
-				if(OptionsChoice == "") CurrentWindow = "Main";
-				else OptionsChoice = "";
+			GS.OptionsButtons(OptionButtons, OptionsBack);
+			if(GS.OptionsChoice == "-1"){
+				GS.OptionsChoice = "";
+				CurrentWindow = "Main";
 			}
 
 		} else if (CurrentWindow == "Credits") {
@@ -751,7 +660,7 @@ public class MenuScript : MonoBehaviour {
 				Loading = 1f;
 				TimeUntilLoad -= 0.01f * (Time.fixedDeltaTime * 100f);
 			} else {
-				GS.LoadLevel(WindowToLoad);
+				GS.LoadLevel(WindowToLoad, "");
 			}
 		}
 		// Loading

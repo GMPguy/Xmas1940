@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using Unity.Profiling.LowLevel;
 using UnityEngine;
 using UnityEngine.SocialPlatforms.Impl;
 
@@ -149,52 +150,59 @@ public class EnemyVesselScript : MonoBehaviour {
 		
 	}
 
-	void Marker(int Quality){
+	public void Marker(int Quality){
 
-		if(MarkerUpdate > 0f){
+		if(Quality != -1){
+			if(MarkerUpdate > 0f){
 
-			MarkerUpdate -= Time.deltaTime;
-
-		} else {
-
-			if (PlayerActuall != null && IsDead == false) {
-				Transform ChostMarker = null;
-				if (Vector3.Distance (this.transform.position, PlayerActuall.transform.position) > PlayerActuall.GetComponent<PlayerScript>().GunDistane) {
-					FarMarker.transform.GetChild(0).GetComponent<TextMesh>().text = ((Vector3.Distance (this.transform.position, PlayerActuall.transform.position) / 1000f).ToString() + "000").Substring(0, 4) + "km";
-					ChostMarker = FarMarker.transform;
-					if(!FarMarker.activeSelf){
-						FarMarker.SetActive (true);
-						MarkerNear.SetActive (false);
-					}
-				} else {
-					MarkerNear.transform.GetChild (0).GetComponent<TextMesh> ().text = ((Vector3.Distance(this.transform.position, PlayerActuall.transform.position) / 1000f).ToString() + "000").Substring(0, 4) + "km";
-	                ChostMarker = MarkerNear.transform;
-					if(FarMarker.activeSelf){
-						FarMarker.SetActive (false);
-						MarkerNear.SetActive (true);
-					}
-				}
-
-				ChostMarker.LookAt (Camera.transform.position, Camera.transform.up * 1f);
-				ChostMarker.localScale = Vector3.one * Vector3.Distance(this.transform.position, Camera.transform.position) * 0.2f;//new Vector3 (Vector3.Distance(this.transform.position, Camera.transform.position) * 0.2f, Vector3.Distance(this.transform.position, Camera.transform.position) * 0.2f, Vector3.Distance(this.transform.position, Camera.transform.position) * ScaleMultiplier);
-			
-				if(QualitySettings.GetQualityLevel() >= 1) {
-					Color SC = ChostMarker.GetComponent<SpriteRenderer>().color;
-					SC.a = Mathf.Lerp(1f, 0.1f, Quaternion.Angle (Quaternion.Euler(Camera.transform.eulerAngles.x, Camera.transform.eulerAngles.y, 0f), Quaternion.LookRotation (ChostMarker.position - Camera.transform.position)) / Mathf.Lerp(360f, 30f, (Vector3.Distance (this.transform.position, PlayerActuall.transform.position)-DetectionDistance) / DetectionDistance));
-					ChostMarker.GetComponent<SpriteRenderer>().color = ChostMarker.GetChild(0).GetComponent<TextMesh>().color = SC;
-				}
-
-				if(QualitySettings.GetQualityLevel() == 2) MarkerUpdate = 0.04f;
-				else if(QualitySettings.GetQualityLevel() == 1) MarkerUpdate = 0.1f;
-				else if(QualitySettings.GetQualityLevel() == 0) MarkerUpdate = 0.25f;
+				MarkerUpdate -= Time.deltaTime;
 
 			} else {
-				if(FarMarker.activeSelf || MarkerNear.activeSelf){
-					FarMarker.SetActive (false);
-					MarkerNear.SetActive (false);
-				}
-			}
 
+				if (PlayerActuall != null && IsDead == false) {
+					Transform ChostMarker = null;
+					if (Vector3.Distance (this.transform.position, PlayerActuall.transform.position) > PlayerActuall.GetComponent<PlayerScript>().GunDistane) {
+						FarMarker.transform.GetChild(0).GetComponent<TextMesh>().text = ((Vector3.Distance (this.transform.position, PlayerActuall.transform.position) / 1000f).ToString() + "000").Substring(0, 4) + "km";
+						ChostMarker = FarMarker.transform;
+						if(!FarMarker.activeSelf){
+							FarMarker.SetActive (true);
+							MarkerNear.SetActive (false);
+						}
+					} else {
+						MarkerNear.transform.GetChild (0).GetComponent<TextMesh> ().text = ((Vector3.Distance(this.transform.position, PlayerActuall.transform.position) / 1000f).ToString() + "000").Substring(0, 4) + "km";
+	    	            ChostMarker = MarkerNear.transform;
+						if(FarMarker.activeSelf){
+							FarMarker.SetActive (false);
+							MarkerNear.SetActive (true);
+						}
+					}
+
+					ChostMarker.LookAt (Camera.transform.position, Camera.transform.up * 1f);
+					ChostMarker.localScale = Vector3.one * Vector3.Distance(this.transform.position, Camera.transform.position) * 0.2f;//new Vector3 (Vector3.Distance(this.transform.position, Camera.transform.position) * 0.2f, Vector3.Distance(this.transform.position, Camera.transform.position) * 0.2f, Vector3.Distance(this.transform.position, Camera.transform.position) * ScaleMultiplier);
+			
+					if(QualitySettings.GetQualityLevel() >= 1) {
+						Color SC = ChostMarker.GetComponent<SpriteRenderer>().color;
+						SC.a = Mathf.Lerp(1f, 0.1f, Quaternion.Angle (Quaternion.Euler(Camera.transform.eulerAngles.x, Camera.transform.eulerAngles.y, 0f), Quaternion.LookRotation (ChostMarker.position - Camera.transform.position)) / Mathf.Lerp(360f, 30f, (Vector3.Distance (this.transform.position, PlayerActuall.transform.position)-DetectionDistance) / DetectionDistance));
+						ChostMarker.GetComponent<SpriteRenderer>().color = ChostMarker.GetChild(0).GetComponent<TextMesh>().color = SC;
+					}
+
+					if(QualitySettings.GetQualityLevel() == 2) MarkerUpdate = 0.04f;
+					else if(QualitySettings.GetQualityLevel() == 1) MarkerUpdate = 0.1f;
+					else if(QualitySettings.GetQualityLevel() == 0) MarkerUpdate = 0.25f;
+
+				} else {
+					if(FarMarker.activeSelf || MarkerNear.activeSelf){
+						FarMarker.SetActive (false);
+						MarkerNear.SetActive (false);
+					}
+				}
+
+			}
+		} else {
+			Color SC = MarkerNear.GetComponent<SpriteRenderer>().color;
+			SC.a = 1f;
+			MarkerNear.GetComponent<SpriteRenderer>().color = MarkerNear.transform.GetChild(0).GetComponent<TextMesh>().color = SC;
+			FarMarker.GetComponent<SpriteRenderer>().color = FarMarker.transform.GetChild(0).GetComponent<TextMesh>().color = SC;
 		}
 
 	}

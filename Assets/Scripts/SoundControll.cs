@@ -14,7 +14,7 @@ public class SoundControll : MonoBehaviour {
 
     public void Set() {
         if(this.GetComponent<AudioSource>())
-            if(AudioType == 0) this.GetComponent<AudioSource>().volume = GS.Volumes[0] * GS.Volumes[2];
+            if(AudioType == 0) this.GetComponent<AudioSource>().volume = GS.Volumes[0] * GS.Volumes[2] * Time.timeScale;
             else this.GetComponent<AudioSource>().volume = GS.Volumes[0] * GS.Volumes[1];
     }
 }

@@ -32,10 +32,8 @@ public class ButtonScript : MonoBehaviour {
 		if (IsActive == false) {
 			IsSelected = false;
 		} else {
-			if(Input.GetMouseButtonDown(0) && IsSelected == true){
-				if(ButtonPress != null){
-					ButtonPress.Play ();
-				}
+			if((Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1)) && IsSelected == true && ButtonPress){
+				ButtonPress.Play ();
 			}
 		}
 		
@@ -49,9 +47,7 @@ public class ButtonScript : MonoBehaviour {
 
 		if(IsActive == true){
 			IsSelected = true;
-			if(ButtonSelect != null){
-				ButtonSelect.Play ();
-			}
+			if(ButtonSelect) ButtonSelect.Play ();
 		}
 
 	}

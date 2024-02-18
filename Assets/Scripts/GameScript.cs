@@ -19,7 +19,7 @@ public class GameScript : MonoBehaviour {
 	public float[] Volumes = new float[] { 1f, 1f, 1f, -1}; // master, music, sounds, prev sounds
 	public int ControlScheme = 0; // Mouse and Keyboard, Pointing
 	public bool InvertedMouse = false;
-    readonly Color[] PrevLight = new Color[2];
+    public Color[] PrevLight = new Color[2];
 	int SwitchDesperate = 0;
 	// Options
 
@@ -54,6 +54,7 @@ public class GameScript : MonoBehaviour {
 	public int PreviousScore = 0;
 	public string PreviousPlane = "";
     public bool HasDied = false;
+	public string OptionsChoice = "";
 	// Misc
 
 	// Main Variables
@@ -137,11 +138,10 @@ public class GameScript : MonoBehaviour {
 			if (QualitySettings.GetQualityLevel () == 0 && SwitchDesperate != 0) {
 				SwitchDesperate = 0;
 				GameObject.Find ("MainCamera").GetComponent<Camera> ().clearFlags = CameraClearFlags.Color;
+				foreach(GameObject HidMarker in GameObject.FindGameObjectsWithTag("Foe")) HidMarker.GetComponent<EnemyVesselScript>().Marker(-1);
 				if(GameObject.Find("MainLight")){
 					Light S = GameObject.Find("MainLight").GetComponent<Light>();
-					PrevLight[0] = GameObject.Find ("MainCamera").GetComponent<Camera> ().backgroundColor;
 					GameObject.Find ("MainCamera").GetComponent<Camera> ().backgroundColor = S.color;
-					PrevLight[1] = RenderSettings.ambientLight;
 					RenderSettings.ambientLight = S.color;
 					S.intensity = 0f;
 				}
@@ -182,7 +182,8 @@ public class GameScript : MonoBehaviour {
 		}
 	}
 
-	public void LoadLevel(string LevelName){
+	public void LoadLevel(string LevelName, string LevelBonus){
+		if(LevelName == "MainMenu") WhichMenuWindowToLoad = LevelBonus;
 		SceneManager.LoadScene (LevelName);
 		SwitchDesperate = 1;
 	}
@@ -302,6 +303,107 @@ public class GameScript : MonoBehaviour {
 			PlayerPrefs.SetFloat ("MusicVolume", Volumes[2]);
 			PlayerPrefs.SetInt ("HighScore", HighScore);
 		}
+
+	}
+
+	public void OptionsButtons(ButtonScript[] OptionButtons, ButtonScript OptionsBack){
+
+		OptionsBack.GetComponent<Text> ().text = SetText ("Back", "Wróć");
+		OptionsBack.IsActive = true;
+
+			string[] optiones = new string[]{};
+			switch(OptionsChoice){
+				case "Graph": 
+					if (Build == "Web") optiones = new string[]{"1100", "Quality", "Fullscreen", "", ""};
+					else optiones = new string[]{"1110", "Quality", "Fullscreen", "Resolution", ""}; 
+					break;
+				case "Sound": optiones = new string[]{"1110", "Master", "Music", "SFX", ""}; break;
+				case "Game": optiones = new string[]{"1110", "Controls", "Inverted", "Language", ""}; break;
+				default: optiones = new string[]{"1110", "Graph", "Sound", "Game", ""}; break;
+			}
+
+			for(int setOpt = 0; setOpt < 4; setOpt++){
+				ButtonScript currButt = OptionButtons[setOpt];
+				Text currText = OptionButtons[setOpt].GetComponent<Text>();
+				int Click = 0;
+
+				if(optiones[0][setOpt] == '1') currButt.IsActive = true;
+				else currButt.IsActive = false;
+
+				if(currButt.IsSelected)
+					if(Input.GetMouseButtonDown(0)) Click = 1; else if(Input.GetMouseButtonDown(1)) Click = -1;
+				
+				switch(optiones[setOpt+1]){
+
+					case "Graph":
+						currText.text = SetText("Graphics", "Grafika");
+						if(Click==1) OptionsChoice = optiones[setOpt+1];
+						break;
+					case "Sound":
+						currText.text = SetText("Audio", "Udźwiękowienie");
+						if(Click==1) OptionsChoice = optiones[setOpt+1];
+						break;
+					case "Game":
+						currText.text = SetText("Game", "Gra");
+						if(Click==1) OptionsChoice = optiones[setOpt+1];
+						break;
+
+					case "Quality":
+						string[] quotas = new string[]{"Desperate", "Low", "Medium", "High", "Desperacka", "Niska", "Średnia", "Wysoka"};
+						currText.text = SetText("Quality: " + quotas[QualitySettings.GetQualityLevel()], "Jakość: " + quotas[QualitySettings.GetQualityLevel()+4]);
+						if(Click==-1 && QualitySettings.GetQualityLevel() == 0) QualitySettings.SetQualityLevel(3);
+						else if (Click==1 && QualitySettings.GetQualityLevel() == 3) QualitySettings.SetQualityLevel(0);
+						else if(Click==1) QualitySettings.IncreaseLevel();
+						else if(Click==-1) QualitySettings.DecreaseLevel();
+						break;
+					case "Fullscreen":
+						if(Screen.fullScreen == true) currText.text = SetText("Fullscreen mode: enabled", "Pełen ekran: włączony");
+						else currText.text = SetText("Fullscreen mode: disabled", "Pełen ekran: wyłączony");
+						if(Click!=0) Screen.fullScreen = !Screen.fullScreen;
+						break;
+					case "Resolution":
+						currText.text = SetText("Resolution: ", "Rozdzielczość: ") + LoadedResolutions[currentResolution].x + "x" + LoadedResolutions[currentResolution].y;
+						if(Click!=0) currentResolution = (LoadedResolutions.Length + currentResolution + Click) % LoadedResolutions.Length;
+						break;
+					
+					case "Master":
+						currText.text = SetText("Master volume: ", "Ogólna głośność: ") + Mathf.Round(Volumes[0]*100f) + "%";
+						if(Click!=0) Volumes[0] = (1f + Volumes[0] + Click/10f) % 1.1f;
+						break;
+					case "Music":
+						currText.text = SetText("Music volume: ", "Głośność muzyki: ") + Mathf.Round(Volumes[1]*100f) + "%";
+						if(Click!=0) Volumes[1] = (1f + Volumes[1] + Click/10f) % 1.1f;
+						break;
+					case "SFX":
+						currText.text = SetText("Sound effects: ", "Efekty dźwiękowe: ") + Mathf.Round(Volumes[2]*100f) + "%";
+						if(Click!=0) Volumes[2] = (1f + Volumes[2] + Click/10f) % 1.1f;
+						break;
+					
+					case "Controls":
+						string[] conts = new string[]{"Mouse and Keyboard", "Pointing", "Klawiatura i mysz", "Wskazywanie"};
+						currText.text = SetText("Controls: " + conts[ControlScheme], "Sterowanie: " + conts[ControlScheme+2]);
+						if(Click!=0) ControlScheme = (2 + ControlScheme + Click) % 2;
+						break;
+					case "Inverted":
+						if(InvertedMouse == true) currText.text = SetText("Inverted Y axis: enabled", "Odwrócona oś Y: włączony");
+						else currText.text = SetText("Inverted Y axis: disabled", "Odwrócona oś Y: wyłączony");
+						if(Click!=0) InvertedMouse = !InvertedMouse;
+						break;
+					case "Language":
+						currText.text = SetText("Language: English", "Język: Polski");
+						if(Click!=0) 
+							if(Language == "English") Language = "Polski";
+							else Language = "English";
+						break;
+
+					default: currText.text = ""; break;
+				}
+			}
+
+			if (OptionsBack.IsSelected == true && Input.GetMouseButtonDown (0)) {
+				if(OptionsChoice == "") OptionsChoice = "-1";
+				else OptionsChoice = "";
+			}
 
 	}
 

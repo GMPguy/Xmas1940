@@ -67,11 +67,9 @@ public class PlaneDead : MonoBehaviour {
 				GoBackToMenu -= 0.01f;
 			} else {
             	if (IsGameOver == true) {
-        	        GameObject.Find("GameScript").GetComponent<GameScript>().LoadLevel("MainMenu");
-    	            GameObject.Find("GameScript").GetComponent<GameScript>().WhichMenuWindowToLoad = "GameOver";
+        	        GameObject.Find("GameScript").GetComponent<GameScript>().LoadLevel("MainMenu", "GameOver");
 	            } else {
-            	    GameObject.Find("GameScript").GetComponent<GameScript>().LoadLevel("MainMenu");
-        	        GameObject.Find("GameScript").GetComponent<GameScript>().WhichMenuWindowToLoad = "CampaignMessage";
+            	    GameObject.Find("GameScript").GetComponent<GameScript>().LoadLevel("MainMenu", "CampaignMessage");
     	        }
 			}
 		}
