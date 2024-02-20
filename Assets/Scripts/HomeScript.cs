@@ -7,7 +7,9 @@ public class HomeScript : MonoBehaviour {
 	// References
 	public GameObject MarkerNear;
 	public GameObject MarkerFar;
-	public PlayerScript player;
+	PlayerScript player;
+	CanvasScript MainCanvas;
+	GameScript GS;
 	// References
 
 	// Main Variables
@@ -22,6 +24,10 @@ public class HomeScript : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
+
+		player = GameObject.Find ("MainPlane").GetComponent<PlayerScript>();
+		MainCanvas = player.mainCanvas.GetComponent<CanvasScript>();
+		GS = GameObject.Find("GameScript").GetComponent<GameScript>();
 
 		// Place Down
 		RaycastHit PlacementPoin;
@@ -45,12 +51,6 @@ public class HomeScript : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-
-		if (GameObject.Find ("MainPlane")) {
-			player = GameObject.Find ("MainPlane").GetComponent<PlayerScript>();
-		} else {
-			player = null;
-		}
 
 		if (player != null && GotPresent == false) {
 			if (Vector3.Distance (this.transform.position, player.transform.position) <= player.GetComponent<PlayerScript> ().PresentCannonDistane) {
@@ -136,10 +136,9 @@ public class HomeScript : MonoBehaviour {
 		if(GotPresent == false){
 			GotPresent = true;
 			if(player != null){
-				GameObject.Find ("GameScript").GetComponent<GameScript> ().GainScore (10, 50, "");
-				player.MainCanvas.GetComponent<CanvasScript> ().FlashImage.color = new Color32 (0, 155, 0, 255);
-				player.MainCanvas.GetComponent<CanvasScript> ().DisappearSpeed = 0.01f;
-				player.MainCanvas.GetComponent<CanvasScript> ().SetInfoText ("Present Delivered", "Prezent Dostarczony!", new Color32(0, 225, 0, 255), 2f);
+				GS.GainScore (100);
+				MainCanvas.Message(GS.SetText("Present Delivered!", "Prezent Dostarczony!"), Color.green, new float[]{4f, 2f});
+				MainCanvas.Flash(Color.green, new float[]{0.5f, 1f});
 				player.Health += Random.Range (player.MaxHealth / 4f, player.MaxHealth / 2f);
 				player.Heat = 0f;
 				player.Fuel = player.MaxFuel;

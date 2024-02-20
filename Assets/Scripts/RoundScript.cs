@@ -5,44 +5,58 @@ using UnityEngine;
 public class RoundScript : MonoBehaviour {
 
 	// References
-	public GameObject GameScript;
-	public GameObject Player;
+	public GameScript GS;
+	public PlayerScript player;
 	public GameObject Enemy;
 	public GameObject Home;
 	public GameObject Portal;
     public GameObject Clouds;
     public ParticleSystem Snow;
+    public GameObject DeadPlaneObj;
+    public GameObject Special;
 	// References
 
 	// Main Variables
 	public string State = "Deliver Presents";
 	public int Level = 1;
     public float SnowIntensity = 1f;
-    public int TempScore = 0;
-    public int TempMooney = 0;
     public int MapSize = 0;
 	// Main Variables
+
+    // Results variables
+    public float accBonus, morBonus, hpBonus, EndGrade = 0f;
+    public int TempScore = 0;
+    public int TempMooney = 0;
+    // Results variables
 
 	// Use this for initialization
 	void Start () {
 
-		GameScript = GameObject.Find ("GameScript");
+		GS = GameObject.Find ("GameScript").GetComponent<GameScript>();
 
 		// Find Player
-		Player = GameObject.Find("MainPlane");
+		player = GameObject.Find("MainPlane").GetComponent<PlayerScript>();
 		// Find Player
 
 		// Set Level
-		Level = GameScript.GetComponent<GameScript> ().Level;
-        GameObject.FindObjectOfType<LandScript>().spawnLand("Plains", 20, Random.Range(1f, 999999f), (int)Random.Range(0f, 3.9f));
-        MapSize = (int)Mathf.Lerp(5000f, 15000f, (float)Level/20f);
-        SetUp("Delivery", Level);
-        Player.transform.position = new Vector3(0f, 500f, MapSize/-3f);
+        SetUp("Endless");
         // Set Level
 		
 	}
 
-    void SetUp(string Mode, int LevelState){
+    void SetUp(string How){
+        switch(How){
+            case "Endless":
+                Level = GS.Level;
+                GameObject.FindObjectOfType<LandScript>().spawnLand("Plains", 20, Random.Range(1f, 999999f), (int)Random.Range(0f, 3.9f));
+                MapSize = (int)Mathf.Lerp(5000f, 15000f, (float)Level/20f);
+                SetUpPawns("Delivery", Level);
+                player.transform.position = new Vector3(0f, 500f, MapSize/-3f);
+                break;
+        }
+    }
+
+    void SetUpPawns(string Mode, int LevelState){
 
         switch (Mode){
             case "Delivery":
@@ -105,6 +119,7 @@ public class RoundScript : MonoBehaviour {
                 // Spawn Sequence
                 break;
         }
+        for(int ee = GameObject.FindGameObjectsWithTag("Foe").Length; ee > 0; ee--) GS.statModify("Enemies encountered", 1);
 
         // Clouds
         SnowIntensity = Random.Range(3f, 10f);
@@ -122,52 +137,69 @@ public class RoundScript : MonoBehaviour {
 
 	void FixedUpdate () {
 
-		GameScript = GameObject.Find ("GameScript");
-
         ParticleSystem myParticleSystem;
         ParticleSystem.EmissionModule emissionModule;
         myParticleSystem = Snow.GetComponent<ParticleSystem>();
         emissionModule = myParticleSystem.emission;
         emissionModule.rateOverTime = (SnowIntensity * 100f);
 
-        if (State != "Success"){
-			Portal.SetActive (false);
-		} else if(Portal.activeInHierarchy == false){
-			if(Player != null){
-				Portal.SetActive (true);
-				Portal.transform.position = new Vector3 (
-					Mathf.Clamp ((Player.transform.position.x + Random.Range (-1000f, 1000f)), -2500f, 2500f),
-					Random.Range (10f, 100f),
-					Mathf.Clamp ((Player.transform.position.z + Random.Range (-1000f, 1000f)), -2500f, 2500f));
-			}
-		}
-
-		if (State == "Deliver Presents" && GameObject.FindGameObjectsWithTag ("HomeUnchecked").Length <= 0f) {
-			State = "Success";
-			if(Player != null){
-				Player.GetComponent<PlayerScript> ().MainCanvas.GetComponent<CanvasScript> ().SetInfoText ("Mission Accomplished!", "Misja Wykonana!", new Color32 (255, 255, 255, 255), 2f);
-			}
-		} else if (State == "Success"){
-			if(Player != null){
-				Portal.transform.GetChild (1).gameObject.SetActive (true);
-				if(Vector3.Distance (Player.transform.position, Portal.transform.position) < 1000f){
-					Portal.transform.GetChild (1).transform.GetChild (0).GetComponent<TextMesh> ().text = (int)(Vector3.Distance (Player.transform.position, Portal.transform.position)) + "m";
-				} else {
-					Portal.transform.GetChild (1).transform.GetChild (0).GetComponent<TextMesh> ().text = (int)((Vector3.Distance (Player.transform.position, Portal.transform.position)) / 1000f) + "km";
-				}
-			}
+		if (State == "Deliver Presents" && GameObject.FindGameObjectsWithTag ("HomeUnchecked").Length <= 0f && player != null) {
+			State = "SuccessDP";
+            foreach(GameObject Foe in GameObject.FindGameObjectsWithTag("Foe")) 
+                if(!Foe.GetComponent<EnemyVesselScript>().Scarred) Foe.GetComponent<EnemyVesselScript>().Dead(true);
+            GS.statModify("Summarize", 2);
+            accBonus = GS.ReceiveStat("Presents accuracy", true);
+            morBonus = Mathf.Abs( (GS.ReceiveStat("Morality ratio", true) + GS.ReceiveStat("Morality ratio", false)) /2f);
+            hpBonus = player.Health / player.MaxHealth * 100f;
+            EndGrade = (accBonus + morBonus + hpBonus) / 3f;
+            TempMooney = (int)(Level * 250f * (EndGrade/100f));
+            player.mainCanvas.Message(GS.SetText("Mission Accomplished!", "Misja Wykonana!"), Color.white, new float[]{4f, 2f});
+            DeadPlane(new Transform[]{player.transform, player.CurrentPlane.transform}, player.Speed, player.ElevatorFlapsRudder, "Leave");
+            Destroy(player.gameObject);
         } else if(State == "Quit1"){
             State = "Quit2";
-			GameScript.GetComponent<GameScript> ().LoadLevel("MainMenu", "CampaignMessage");
+			GS.LoadLevel("MainMenu", "CampaignMessage");
 		} else if(State == "Left1"){
             State = "Left2";
-			GameScript.GetComponent<GameScript> ().Level += 1;
-            GameScript.GetComponent<GameScript>().CurrentScore += TempScore;
-            GameScript.GetComponent<GameScript>().Mooney += TempMooney;
+            GS.statModify("Summarize", 0);
+			GS.Level += 1;
+            GS.CurrentScore += TempScore;
+            GS.Mooney += TempMooney;
             TempScore = 0;
             TempMooney = 0;
-			GameScript.GetComponent<GameScript> ().LoadLevel("MainMenu", "CampaignMessage");
+			GS.LoadLevel("MainMenu", "CampaignMessage");
         }
 
 	}
+
+    public void DeadPlane(Transform[] Model, float Speed, Vector3 Rotation, string Spec = ""){
+
+        GameObject Corpse = Instantiate(DeadPlaneObj) as GameObject;
+        Corpse.transform.position = Model[0].position;
+        Corpse.transform.rotation = Model[0].rotation;
+
+        if(Model[0].name == "MainPlane"){
+            Corpse.GetComponent<PlaneDead>().IsGameOver = false;
+            Corpse.GetComponent<PlaneDead>().isMine = true;
+        } else {
+            Corpse.GetComponent<PlaneDead>().IsGameOver = false;
+            Corpse.GetComponent<PlaneDead>().isMine = false;
+        }
+        
+        Corpse.GetComponent<PlaneDead>().PreviousSpeed = Speed;
+        Corpse.GetComponent<PlaneDead>().PreviousRotation = Rotation;
+		Model[1].SetParent(Corpse.transform);
+		Corpse.GetComponent<PlaneDead>().PlaneModel = Model[1].gameObject;
+        Corpse.GetComponent<PlaneDead>().Spec = Spec;
+
+        if(Spec != "Leave"){
+            GameObject Boom = Instantiate(Special) as GameObject;
+            Boom.GetComponent<SpecialScript>().TypeofSpecial = "Explosion";
+            Boom.GetComponent<SpecialScript>().ExplosionPower = 1f;
+            Boom.GetComponent<SpecialScript>().ExplosionRadius = 4f;
+            Boom.transform.position = Model[0].position;
+        }
+
+    }
+
 }

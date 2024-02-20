@@ -142,14 +142,15 @@ public class MenuScript : MonoBehaviour {
 		Loading = Random.Range (1f, 3f);
 
 		// Set sky color
-		RenderSettings.skybox.SetColor("_Tint", new Color32(0, 0, 75, 255));
+		/*RenderSettings.skybox.SetColor("_Tint", new Color32(0, 0, 75, 255));
 		RenderSettings.skybox.SetColor("_SkyTint", new Color32(0, 0, 75, 255));
 		RenderSettings.skybox.SetColor("_GroundColor", new Color32(0, 25, 55, 255));
 		RenderSettings.ambientLight = new Color32 (0, 25, 55, 255);
 		RenderSettings.fogColor = new Color32 (0, 25, 55, 255);
 		RenderSettings.fogEndDistance = 1000f;
 		GameObject.Find ("MainLight").GetComponent<Light> ().color = new Color32 (0, 55, 75, 255);
-		GameObject.Find ("MainLight").transform.eulerAngles = new Vector3 (10f, 0f, 0f);
+		GameObject.Find ("MainLight").transform.eulerAngles = new Vector3 (10f, 0f, 0f);*/
+		GS.SetLighting((int)Random.Range(0f, 3.9f));
 		// Set sky color
 
 		Cursor.visible = true;

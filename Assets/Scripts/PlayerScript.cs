@@ -22,8 +22,7 @@ public class PlayerScript : MonoBehaviour {
     public ParticleSystem NearGroundSnow;
 	public GameObject Alarms;
 	public GameObject PresentCannon;
-	public GameObject MainCanvas;
-	public GameObject PlaneDead;
+	public CanvasScript mainCanvas;
 	public GameObject Effect;
 	public GameObject Special;
     public GameObject FreeLook;
@@ -116,7 +115,7 @@ public class PlayerScript : MonoBehaviour {
 		Addition = GS.CurrentAddition;
 		Paint = GS.CurrentPaint;
 
-		MainCanvas = GameObject.Find ("MainCanvas");
+		mainCanvas = GameObject.Find ("MainCanvas").GetComponent<CanvasScript>();
 		PlaneSettings (1);
 		SetStats ();
 
@@ -142,13 +141,12 @@ public class PlayerScript : MonoBehaviour {
 		Health = Mathf.Clamp(Health, 0f, MaxHealth);
 		Fuel = Mathf.Clamp(Fuel, 0f, MaxFuel);
 		if(Heat > 0f){
-			if(GunCooldown <= -0.9f) {
-				float mainheat = Heat;
-				Heat = Mathf.Clamp (Heat - (0.02f*(MaxHeat/HeatDispare)), 0f, MaxHeat*2f);
+			if(GunCooldown <= -0.9f && HeatDispare < 9000f) {
+				Heat = Mathf.Clamp (Heat - 0.02f, 0f, MaxHeat*2f);
 			}
 			if(Heat > MaxHeat) {
 				Heat = -MaxHeat - 10f;
-				MainCanvas.GetComponent<CanvasScript> ().SetInfoText ("Gun overheated!", "Broń się przegrzała!", new Color32 (255, 0, 0, 255), 1.5f);
+				mainCanvas.Message(GS.SetText("Gun overheated!", "Broń się przegrzała!"), Color.red, new float[]{3f,1.5f}, "Overheating");
 			}
 		} else if (Heat <= -10f) {
 			Heat = Mathf.Clamp (Heat + 0.02f*(MaxHeat/HeatDispare), -Mathf.Infinity, -10f);
@@ -235,7 +233,7 @@ public class PlayerScript : MonoBehaviour {
 	        	    Vector3 AddSteerCamera = this.transform.right * ((ElevatorFlapsRudder.z - ElevatorFlapsRudder.y) * -2f) + this.transform.up * (ElevatorFlapsRudder.x * -2f);
 					Camera.transform.position = AddSteerCamera*divASC + (this.transform.position + ShakeScreen) + (this.transform.forward * -5f) + (this.transform.forward * (Speed / MaxSpeed) * -10f) + (this.transform.up * Mathf.Lerp(4f, 2f, divASC) );
 					//Camera.transform.LookAt (Camera.transform.position + (this.transform.forward * 1f), this.transform.up * 1f);
-					MainCanvas.GetComponent<CanvasScript> ().Crosshair.transform.localScale = Vector3.one*0.1f;
+					mainCanvas.GetComponent<CanvasScript> ().Crosshair.transform.localScale = Vector3.one*0.1f;
 					Camera.transform.LookAt (FreeLook.transform.position + FreeLook.transform.forward * 1000f, this.transform.up);
 				}
 
@@ -346,24 +344,9 @@ public class PlayerScript : MonoBehaviour {
 		// Dead
 		if(Health <= 0f){
 
+			RS.DeadPlane(new[]{this.transform, CurrentPlane.transform}, Speed, ElevatorFlapsRudder);
+			GS.statModify("Summarize", 1);
 			GS.Parachutes -= 1;
-            GameObject Boom = Instantiate(Special) as GameObject;
-            Boom.GetComponent<SpecialScript>().TypeofSpecial = "Explosion";
-            Boom.GetComponent<SpecialScript>().ExplosionPower = 1f;
-            Boom.GetComponent<SpecialScript>().ExplosionRadius = 2f;
-            Boom.transform.position = this.transform.position;
-
-            GameObject Corpse = Instantiate(PlaneDead) as GameObject;
-            Corpse.transform.position = this.transform.position;
-            Corpse.transform.rotation = this.transform.rotation;
-            Corpse.GetComponent<PlaneDead>().IsGameOver = false;
-            Corpse.GetComponent<PlaneDead>().isMine = true;
-            Corpse.GetComponent<PlaneDead>().PreviousSpeed = Speed;
-            Corpse.GetComponent<PlaneDead>().PreviousRotation = ElevatorFlapsRudder;
-			CurrentPlane.transform.SetParent(Corpse.transform);
-			Corpse.GetComponent<PlaneDead>().PlaneModel = CurrentPlane;
-            Destroy(this.gameObject);
-
             if (GS.Parachutes <= 0){
                 GS.PreviousScore = GS.CurrentScore;
                 GS.PreviousPlane = PlaneModel;
@@ -372,6 +355,8 @@ public class PlayerScript : MonoBehaviour {
             } else {
                 GS.HasDied = true;
             }
+			Destroy(this.gameObject);
+
 		}
 		// Dead
 
@@ -379,10 +364,10 @@ public class PlayerScript : MonoBehaviour {
 		if (this.transform.position.x < RS.MapSize/-2f || this.transform.position.x > RS.MapSize/2f || this.transform.position.z < RS.MapSize/-2f || this.transform.position.z > RS.MapSize/2f) {
 			BeyondMap = true;
 			if (Desertion > 0f) {
-				MainCanvas.GetComponent<CanvasScript> ().SetInfoText ("You're leaving the map! Go back, now!\n " + Mathf.Round (Desertion) + " seconds", "Opuszczasz mapę! Wracaj natychmiast!\n " + Mathf.Round (Desertion) + " sekundy", new Color32 (255, 0, 0, 255), 1f);
+				mainCanvas.Message(GS.SetText("You're leaving the map! Go back, now!\n " + Mathf.Round (Desertion) + " seconds", "Opuszczasz mapę! Wracaj natychmiast!\n " + Mathf.Round (Desertion) + " sekundy"), Color.red, new float[]{0.25f, 1f});
 				Desertion -= 0.01f;
 			} else {
-				MainCanvas.GetComponent<CanvasScript> ().SetInfoText ("You'll be taken down for desertion", "Zostaniesz zdjęty za dezercję", new Color32 (255, 0, 0, 255), 1f);
+				mainCanvas.Message(GS.SetText("You'll be taken down for desertion", "Zostaniesz zdjęty za dezercję"), Color.red, new float[]{0.25f, 1f});
 				if (DesertionBoom > 0f) {
 					DesertionBoom -= 0.01f;
 				} else {
@@ -560,7 +545,7 @@ public class PlayerScript : MonoBehaviour {
 
 		// Diving too fast
 		if(Speed / MaxSpeed >= 1.75f){
-            MainCanvas.GetComponent<CanvasScript>().SetInfoText("You're going too fast!", "Prędkość zbyt wyskoka!", new Color32(255, 0, 0, 255), 1f);
+			mainCanvas.Message(GS.SetText("You're going too fast!", "Prędkość zbyt wysoka!"), Color.red, new float[]{0.25f, 1f});
             Health -= Random.Range (MaxHealth / 1000f, MaxHealth / 500f);
 			ShakePower = (1.75f - (Speed / MaxSpeed)) * 2f;
 			ShakeDecay = 0.1f;
@@ -684,7 +669,7 @@ public class PlayerScript : MonoBehaviour {
 			Stalling = Mathf.Clamp(Stalling + 0.02f, 0f, 5f);
 
 		if(Stalling > 0f){
-            MainCanvas.GetComponent<CanvasScript>().SetInfoText("You're stalling!", "Prędkość zbyt niska!", new Color32(255, 0, 0, 255), 1f);
+			mainCanvas.Message(GS.SetText("You're stalling!", "Prędkość zbyt wysoka"), Color.red, new float[]{0.25f, 1f});
             Stalling -= 0.01f;
 			this.transform.position += Vector3.up * -0.1f;
 			this.transform.eulerAngles += new Vector3(Mathf.Lerp(0f, Stalling, AngleX*10f), 0f, 0f);
@@ -757,22 +742,19 @@ public class PlayerScript : MonoBehaviour {
 			}
 		}
 		if(Input.GetButton("Special")){
-            if (SpecialType == "None")
-            {
-                MainCanvas.GetComponent<CanvasScript>().SetInfoText("You don't have any special!", "Nie masz żadnego ekwipunku specjalnego!", new Color32(255, 0, 0, 255), 1f);
-            }
+            if (SpecialType == "None"){
+				mainCanvas.Message(GS.SetText("You don't have any specials!", "Nie masz żadnych specjalnych przedmiotów!"), Color.red, new float[]{3f, 1f});
+			}
             if (SpecialCooldown <= 0f){
 				SpecialCooldown = MaxSpecialCooldown;
                 if(SpecialType == "Wrenches"){
-					Health += MaxHealth / 4f;
-					MainCanvas.GetComponent<CanvasScript> ().FlashImage.color = new Color32 (0, 155, 0, 255);
-					MainCanvas.GetComponent<CanvasScript> ().DisappearSpeed = 0.05f;
+					Health += MaxHealth / 2f;
+					mainCanvas.Flash(Color.green, new float[]{0.5f, 1f});
 				} else if(SpecialType == "Fuel Tank"){
-					Fuel += MaxFuel / 4f;
-					MainCanvas.GetComponent<CanvasScript> ().FlashImage.color = new Color32 (0, 155, 255, 255);
-					MainCanvas.GetComponent<CanvasScript> ().DisappearSpeed = 0.05f;
+					Fuel = MaxFuel;
+					mainCanvas.Flash(new Color(0f, 0.5f, 1f, 1f), new float[]{0.5f, 1f});
 				} else if(SpecialType == "Homing Missile"){
-					Shoot("Homing Missile", PresentCannon.transform.position + (this.transform.forward * 5f), PresentCannon.transform, this.transform.position + this.transform.forward);
+					Shoot("Homing Missile", PresentCannon.transform.position + (this.transform.forward * 15f), PresentCannon.transform, PresentCannon.transform.position + this.transform.forward * 16f);
 				} else if(SpecialType == "Flares"){
 					GameObject Bullet = Instantiate (Special) as GameObject;
 					Bullet.transform.position = this.transform.position;
@@ -793,10 +775,11 @@ public class PlayerScript : MonoBehaviour {
         Bullet.transform.LookAt(There);
 		Bullet.GetComponent<ProjectileScript>().GunFirePos = GunFirePos;
         Bullet.GetComponent<ProjectileScript>().WhoShot = this.gameObject;
-        Bullet.GetComponent<ProjectileScript>().PreviusSpeed = ((Speed * 0.003f) * 1.1f);
+        Bullet.GetComponent<ProjectileScript>().PreviusSpeed = Speed;
 		switch(TypeofGun){
 			case "Main":
 				Bullet.GetComponent<ProjectileScript>().TypeofGun = GunType;
+				GS.statModify("Shots fired", 1);
 				break;
 			case "Present":
 				Bullet.GetComponent<ProjectileScript>().TypeofGun = "Present";
@@ -922,13 +905,8 @@ public class PlayerScript : MonoBehaviour {
 	public void Hurt(float Damage, int RedFlash, int PowerofShake){
 
 		Health -= Damage * (float)GS.DifficultyLevel;
-		if(RedFlash == 1){
-			MainCanvas.GetComponent<CanvasScript> ().FlashImage.color = new Color32 (255, 0, 0, 75);
-			MainCanvas.GetComponent<CanvasScript> ().DisappearSpeed = 0.01f;
-		} else if(RedFlash == 2){
-			MainCanvas.GetComponent<CanvasScript> ().FlashImage.color = new Color32 (255, 0, 0, 255);
-			MainCanvas.GetComponent<CanvasScript> ().DisappearSpeed = 0.01f;
-		}
+		if(RedFlash == 1)mainCanvas.Flash(Color.red, new float[]{0.25f, 0.5f});
+		else if(RedFlash == 2)mainCanvas.Flash(Color.red, new float[]{0.375f, 0.5f});
 
 		if(PowerofShake == 1){
 			ShakePower = 1f;
@@ -990,7 +968,6 @@ public class PlayerScript : MonoBehaviour {
     private void OnTriggerStay(Collider Col){
 		if (Col.tag == "Cloud") {
             Flares = 1f;
-            MainCanvas.GetComponent<CanvasScript>().SetInfoText("You're in a cloud", "Jesteś w chmurze", new Color32(225, 225, 255, 255), 1f);
         }
     }
 

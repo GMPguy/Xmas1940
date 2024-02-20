@@ -43,55 +43,7 @@ public class LandScript : MonoBehaviour {
 		// Land
 
 		// Lighting
-		int ChooseSky = SkyPick;
-		string[] SkyColors = new string[]{"Blue", "DarkBlue", "Violet", "Orange"};
-		SkyColor = SkyColors[ChooseSky];
-
-		Color32 Sky = new(0,0,0,0);
-		float SkySize = 0.5f;
-		Color32 Ambient = new(0,0,0,0);
-		Color32 Fog = new(0,0,0,0);
-		switch(SkyColor){
-			case "Blue":
-				Sky = new Color32(0, 64, 125, 255);
-				Ambient = new Color32 (25, 64, 128, 255);
-				Fog = new Color32 (72, 108, 179, 255);
-				GameObject.Find ("MainLight").GetComponent<Light> ().color = new Color32 (0, 55, 75, 255);
-				GameObject.Find ("MainLight").transform.eulerAngles = new Vector3 (45f, 0f, 0f);
-				break;
-			case "DarkBlue":
-				Sky = new Color32(0, 125, 255, 255);
-				SkySize = 0.2f;
-				Ambient = new Color32 (0, 0, 55, 255);
-				Fog = new Color32 (13, 32, 99, 255);
-				GameObject.Find ("MainLight").GetComponent<Light> ().color = new Color32 (0, 125, 255, 255);
-				GameObject.Find ("MainLight").transform.eulerAngles = new Vector3 (10f, 0f, 0f);
-				break;
-			case "Violet":
-				Sky = new Color32(100, 0, 75, 255);
-				Ambient = new Color32 (37, 35, 58, 255);
-				Fog = new Color32 (77, 70, 116, 255);
-				GameObject.Find ("MainLight").GetComponent<Light> ().color = new Color32 (75, 65, 116, 255);
-				GameObject.Find ("MainLight").transform.eulerAngles = new Vector3 (10f, 0f, 0f);
-				break;
-			case "Orange":
-				Sky = new Color32(255, 100, 0, 255);
-				SkySize = 0.5f;
-				Ambient = new Color32 (100, 50, 50, 255);
-				Fog = new Color32 (173, 127, 119, 255);
-				GameObject.Find ("MainLight").GetComponent<Light> ().color = new Color32 (125, 75, 55, 255);
-				GameObject.Find ("MainLight").transform.eulerAngles = new Vector3 (30f, 180f, 0f);
-				break;
-		}
-
-		RenderSettings.ambientLight = Ambient;
-		RenderSettings.skybox.SetColor("_SkyTint", Sky);
-		RenderSettings.skybox.SetFloat("_AtmosphereThickness", SkySize);
-		RenderSettings.skybox.SetColor("_GroundColor", Fog);
-		RenderSettings.fogColor = GameObject.Find ("MainCamera").GetComponent<Camera> ().backgroundColor = Fog;
-
-		GS.PrevLight[0] = Fog;
-		GS.PrevLight[1] = Ambient;
+		GS.SetLighting(SkyPick);
 		// Lighting
 
 	}

@@ -24,6 +24,7 @@ public class GameScript : MonoBehaviour {
 	// Options
 
 	// Game
+	public Stat[] Statistics;
 	public int Level = 1;
 	public int DifficultyLevel = 1;
 	public int CurrentScore = 0;
@@ -99,6 +100,8 @@ public class GameScript : MonoBehaviour {
 					if(prefRR == -1) prefRR = res.refreshRate;
 				}
 				LoadedResolutions = loadResolutions.ToArray();
+
+				statModify("SetUp", 0);
 
 			} else {
 				Destroy (this.gameObject);
@@ -280,13 +283,8 @@ public class GameScript : MonoBehaviour {
 		}
 	}
 
-	public void GainScore(int GainScore, int GainMooney, string special){
-
-		if(special == ""){
-			GameObject.Find("RoundScript").GetComponent<RoundScript>().TempScore += GainScore * DifficultyLevel;
-            GameObject.Find("RoundScript").GetComponent<RoundScript>().TempMooney += GainMooney / DifficultyLevel;
-		}
-
+	public void GainScore(int GainScore){
+		GameObject.Find("RoundScript").GetComponent<RoundScript>().TempScore += GainScore * DifficultyLevel;
 	}
 
 	void OnApplicationQuit(){
@@ -405,6 +403,187 @@ public class GameScript : MonoBehaviour {
 				else OptionsChoice = "";
 			}
 
+	}
+
+	public void SetLighting(int ChooseSky){
+		string[] SkyColors = new string[]{"Blue", "DarkBlue", "Violet", "Orange"};
+
+		Color32 Sky = new(0,0,0,0);
+		float SkySize = 0.5f;
+		Color32 Ambient = new(0,0,0,0);
+		Color32 Fog = new(0,0,0,0);
+		switch(SkyColors[ChooseSky]){
+			case "Blue":
+				Sky = new Color32(0, 64, 125, 255);
+				Ambient = new Color32 (25, 64, 128, 255);
+				Fog = new Color32 (72, 108, 179, 255);
+				GameObject.Find ("MainLight").GetComponent<Light> ().color = new Color32 (0, 55, 75, 255);
+				GameObject.Find ("MainLight").transform.eulerAngles = new Vector3 (45f, 0f, 0f);
+				break;
+			case "DarkBlue":
+				Sky = new Color32(0, 125, 255, 255);
+				SkySize = 0.2f;
+				Ambient = new Color32 (0, 0, 55, 255);
+				Fog = new Color32 (13, 32, 99, 255);
+				GameObject.Find ("MainLight").GetComponent<Light> ().color = new Color32 (0, 125, 255, 255);
+				GameObject.Find ("MainLight").transform.eulerAngles = new Vector3 (10f, 0f, 0f);
+				break;
+			case "Violet":
+				Sky = new Color32(100, 0, 75, 255);
+				Ambient = new Color32 (37, 35, 58, 255);
+				Fog = new Color32 (77, 70, 116, 255);
+				GameObject.Find ("MainLight").GetComponent<Light> ().color = new Color32 (75, 65, 116, 255);
+				GameObject.Find ("MainLight").transform.eulerAngles = new Vector3 (10f, 0f, 0f);
+				break;
+			case "Orange":
+				Sky = new Color32(255, 100, 0, 255);
+				SkySize = 0.5f;
+				Ambient = new Color32 (100, 50, 50, 255);
+				Fog = new Color32 (173, 127, 119, 255);
+				GameObject.Find ("MainLight").GetComponent<Light> ().color = new Color32 (125, 75, 55, 255);
+				GameObject.Find ("MainLight").transform.eulerAngles = new Vector3 (30f, 180f, 0f);
+				break;
+		}
+
+		RenderSettings.ambientLight = Ambient;
+		RenderSettings.skybox.SetColor("_SkyTint", Sky);
+		RenderSettings.skybox.SetFloat("_AtmosphereThickness", SkySize);
+		RenderSettings.skybox.SetColor("_GroundColor", Fog);
+		RenderSettings.fogColor = GameObject.Find ("MainCamera").GetComponent<Camera> ().backgroundColor = Fog;
+
+		PrevLight[0] = Fog;
+		PrevLight[1] = Ambient;
+	}
+
+	[System.Serializable] public class Stat{
+
+		GameScript GS;
+		public string[] Names;
+		public int Score = 0;
+		public int tempScore = 0;
+		int WriteP = 0; // 0 always write, 1 write only in main statistics, 2 don't show
+
+		public Stat(string[] setNames, GameScript setGS, int setWriteP){
+			Names = setNames;
+			GS = setGS;
+			WriteP = setWriteP;
+		}
+
+		public void Add(int Change){ tempScore += Change; }
+		public void AddSurpas(int Change){ Score += Change; }
+		public void Summary(int Gotit){ // 0 Add to score, 1 ignore, 2 calculate the specials
+
+			switch(Names[0]){
+				case "Presents accuracy":
+					float[] indP = new float[]{(float)GS.ReceiveStat("Presents delivered", false), (float)GS.ReceiveStat("Presents missed", false), (float)GS.ReceiveStat("Presents delivered", true), (float)GS.ReceiveStat("Presents missed", true)};
+					if (indP[0]+indP[1] > 0) Score = (int)Mathf.Lerp(0f, 100f, indP[0] / (indP[0]+indP[1]));
+					else Score = 0;
+					if (indP[2]+indP[3] > 0) tempScore = (int)Mathf.Lerp(0f, 100f, indP[2] / (indP[2]+indP[3]));
+					else tempScore = 0;
+					break;
+				case "Shooting accuracy":
+					float[] indS = new float[]{(float)GS.ReceiveStat("Shots hit", false), (float)GS.ReceiveStat("Shots fired", false), (float)GS.ReceiveStat("Shots hit", true), (float)GS.ReceiveStat("Shots fired", true)};
+					if (indS[1] != 0) Score = (int)Mathf.Lerp(0f, 100f, indS[0] / indS[1]);
+					else Score = -1;
+					if (indS[3] != 0) tempScore = (int)Mathf.Lerp(0f, 100f, indS[2] / indS[3]);
+					else tempScore = -1;
+					break;
+				case "Morality ratio":
+					float[] indM = new float[]{(float)GS.ReceiveStat("Enemies downed", false), (float)GS.ReceiveStat("Enemies spared", false), (float)GS.ReceiveStat("Enemies encountered", false), (float)GS.ReceiveStat("Enemies downed", true), (float)GS.ReceiveStat("Enemies spared", true), (float)GS.ReceiveStat("Enemies encountered", true)};
+					if(indM[2] > 0 && indM[0] > indM[1]) Score = (int)Mathf.Lerp(0f, -100f, indM[0]/indM[2]);
+					else if(indM[2] > 0 && indM[0] < indM[1]) Score = (int)Mathf.Lerp(0f, 100f, indM[1]/indM[2]);
+					else Score = 0;
+					if(indM[5] > 0 && indM[3] > indM[4]) tempScore = (int)Mathf.Lerp(0f, -100f, indM[3]/indM[5]);
+					else if(indM[5] > 0 && indM[3] < indM[4]) tempScore = (int)Mathf.Lerp(0f, 100f, indM[4]/indM[5]);
+					else tempScore = 0;
+					break;
+				default:
+					if(Gotit == 0) { Score += tempScore; tempScore = 0; } else if (Gotit == 1) { tempScore = 0; }
+					break;
+			}
+			
+		}
+		public string ReceiveName(bool temp = false, string newLine = ""){
+
+			switch(Names[0]){
+				case "Presents accuracy": case "Shooting accuracy":
+					if(Score != -1 && !temp && (WriteP == 0 || WriteP == 1)) return GS.SetText(Names[0], Names[1]) + ": " + Score + "%" + newLine;
+					else if(tempScore != -1 && temp && WriteP == 0) return GS.SetText(Names[0], Names[1]) + ": " + tempScore + "%" + newLine;
+					break;
+				case "Morality ratio":
+					if(!temp) {
+						if(Score > 0) return GS.SetText(Names[0], Names[1]) + ": " + GS.SetText("pacifist ", "pacyfista ") + Score + "%" + newLine;
+						else if (Score < 0) return GS.SetText(Names[0], Names[1]) + ": " + GS.SetText("aggressor ", "agresor ") + -Score + "%" + newLine;
+					} else if(temp){
+						if(tempScore > 0) return GS.SetText(Names[0], Names[1]) + ": " + GS.SetText("pacifist ", "pacyfista ") + tempScore + "%" + newLine;
+						else if (tempScore < 0) return GS.SetText(Names[0], Names[1]) + ": " + GS.SetText("aggressor ", "agresor ") + -tempScore + "%" + newLine;
+					}
+					break;
+				default:
+					if(Score != 0 && !temp && (WriteP == 0 || WriteP == 1)) return GS.SetText(Names[0], Names[1]) + ": " + Score + newLine;
+					else if(tempScore != 0 && temp && WriteP == 0) return GS.SetText(Names[0], Names[1]) + ": " + tempScore + newLine;
+					break;
+			}
+
+			return "";
+			
+		}
+
+	}
+
+	public string statModify(string Name, int Value){
+
+		switch(Name){
+
+			case "SetUp": // set up
+				List<Stat> newStat = new()
+                {
+                    new(new string[] { "Presents delivered", "Dostarczone prezenty" }, this, 0),
+					new(new string[] { "Presents missed", "Spudłowane prezenty" }, this, 0),
+					new(new string[] { "Presents accuracy", "Celność z prezentami" }, this, 0), // this one specific
+					new(new string[] { "Shots fired", "Oddane strzały" }, this, 0),
+					new(new string[] { "Shots hit", "Trafione strzały"}, this, 0),
+					new(new string[] { "Shooting accuracy", "Celność strzelania" }, this, 0), // this one specific
+					new(new string[] { "Enemies downed", "Zdjęci przeciwnicy" }, this, 0),
+					new(new string[] { "Enemies spared", "Oszczędzeni przeciwnicy" }, this, 0),
+					new(new string[] { "Enemies encountered", "Oszczędzeni przeciwnicy" }, this, 0),
+					new(new string[] { "Morality ratio", "Stosunek moralności" }, this, 0), // this one specific
+                };
+				string[] EVDarray = new string[]{"Messerschmitt", "Messerschmitt K4", "Messerschmitt Me 262", "Messerschmitt 110", SetText("AA Gun", "broni przeciwlotniczych"), SetText("Balloon", " balonów")};
+				for(int EVD = 0; EVD < EVDarray.Length; EVD++){
+					newStat.Add(new( new string[]{EVDarray[EVD] + " take downs", "Ilość zdjętych " + EVDarray[EVD]}, this, 0));
+				}
+				Statistics = newStat.ToArray();
+				return "";
+
+			case "Summarize": // summarize
+				foreach(Stat ReadStats in Statistics) ReadStats.Summary(Value);
+				return "";
+
+			case "ReturnAll": case "ReturnTemp":
+				string raList = "";
+				foreach(Stat WriteStats in Statistics) 
+					if(Name == "ReturnTemp") raList += WriteStats.ReceiveName(true, "\n");
+					else raList += WriteStats.ReceiveName(false, "\n");
+				return raList;
+
+			default: // change
+				for(int fn = 0; fn <= Statistics.Length; fn++){
+					if(fn == Statistics.Length) Debug.LogError("No stat of name " + Name + " found!");
+					else if (Statistics[fn].Names[0] == Name) {Statistics[fn].Add(Value); break;}
+				}
+				return "";
+		}
+
+	}
+
+	public int ReceiveStat(string Name, bool Temp){
+		for(int fn = 0; fn <= Statistics.Length; fn++){
+			if(fn >= Statistics.Length) {Debug.LogError("No stat of name " + Name + " found!"); return 0;}
+			else if (Statistics[fn].Names[0] == Name && Temp) return Statistics[fn].tempScore; // 1 return temp score
+			else if (Statistics[fn].Names[0] == Name && !Temp) return Statistics[fn].Score; // 0 return score
+		}
+		return 0;
 	}
 
 }

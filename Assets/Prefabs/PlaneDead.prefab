@@ -268,8 +268,10 @@ MonoBehaviour:
   PreviousRotation: {x: 0, y: 0, z: 0}
   PreviousSpeed: 0
   Effect: {fileID: 1894099743268662, guid: 6135c7fda6fb513498943354327e31bf, type: 3}
-  Paint: Basic Paint
+  Spec: 
   IsGameOver: 0
+  Fire: {fileID: 198078732111783094}
+  Smoke: {fileID: 198042093912986740}
 --- !u!1 &1576788726874384
 GameObject:
   m_ObjectHideFlags: 0

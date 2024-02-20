@@ -9,6 +9,7 @@ public class ProjectileScript : MonoBehaviour {
 	public GameObject WhoShot;
 	public Transform GunFirePos;
 	Vector3 StartPos;
+	GameScript GS;
 	public GameObject PreviousPos;
 	float Damage = 1f;
 	float Speed = 1f;
@@ -36,6 +37,8 @@ public class ProjectileScript : MonoBehaviour {
 
     // Use this for initialization
     void Start () {
+
+		GS = GameObject.Find("GameScript").GetComponent<GameScript>();
 
 		PreviousPos.transform.parent = null;
 		PreviousPos.transform.position = this.transform.position - (this.transform.forward * 1f);
@@ -165,17 +168,15 @@ public class ProjectileScript : MonoBehaviour {
 
 		if(Vector3.Distance(this.transform.position, StartPos) > Range && Hit == false && TypeofGun != "Laser" && TypeofGun != "Blue Laser"){
 			Hit = true;
+			if(TypeofGun == "Present") GS.statModify("Presents missed", 1);
 			if(TypeofGun == "Flak" || TypeofGun == "Homing Missile"){
 				GameObject Boom = Instantiate (Special) as GameObject;
 				Boom.GetComponent<SpecialScript> ().TypeofSpecial = "Explosion";
 				Boom.GetComponent<SpecialScript> ().ExplosionPower = 25f;
 				Boom.GetComponent<SpecialScript> ().ExplosionRadius = 5f;
 				Boom.transform.position = this.transform.position;
-				if (WhoShot != null){
-					if(WhoShot.tag == "Player"){
-						Boom.GetComponent<SpecialScript> ().CausedByPlayer = true;
-					}
-				}
+				if (WhoShot != null && WhoShot.tag == "Player")
+					Boom.GetComponent<SpecialScript> ().CausedByPlayer = true;
 			}
 		}
 
@@ -221,7 +222,7 @@ public class ProjectileScript : MonoBehaviour {
         } else if (TypeofGun == "Homing Missile") {
 
             if (HomingMissileTarget != null) {
-                this.transform.rotation = Quaternion.Lerp(this.transform.rotation, Quaternion.LookRotation(new Vector3(HomingMissileTarget.transform.position.x, HomingMissileTarget.transform.position.y, HomingMissileTarget.transform.position.z) - this.transform.position), 0.1f);
+                this.transform.rotation = Quaternion.Lerp(this.transform.rotation, Quaternion.LookRotation(new Vector3(HomingMissileTarget.transform.position.x, HomingMissileTarget.transform.position.y, HomingMissileTarget.transform.position.z) - this.transform.position), Speed / (PreviusSpeed*10f));
             } else {
                 if (WhoShot != null) {
                     if (WhoShot.GetComponent<PlayerScript>() != null) {
@@ -240,7 +241,7 @@ public class ProjectileScript : MonoBehaviour {
                 }
             }
             if (Speed < PreviusSpeed * 10f) {
-                Speed += PreviusSpeed / 100f;
+                Speed = Mathf.MoveTowards(Speed, PreviusSpeed*10f, 0.02f);
             } else {
                 if (Hit == false) {
                     Hit = true;
@@ -305,7 +306,8 @@ public class ProjectileScript : MonoBehaviour {
     void BulletHit(Collider Col, Vector3 HitPoint){
 
 		if (Hit == false && Col.tag != "Cloud" && Col.tag != "Explosion") {
-
+			bool pDelivered = false;
+			bool sHit = false;
 			if(TypeofGun == "Flammable"){
 				int chance = Random.Range (0, 5);
 				if(chance == 0){
@@ -345,6 +347,7 @@ public class ProjectileScript : MonoBehaviour {
 				if(TypeofGun == "Present"){
 					Hit = true;
 					Col.transform.parent.GetComponent<HomeScript> ().PresentGot ();
+					pDelivered = true;
 				}
 			} else if(Col.transform.parent != null){
 				if (Col.transform.parent.tag == "Terrain" && TypeofGun != "Paintball") {
@@ -360,9 +363,11 @@ public class ProjectileScript : MonoBehaviour {
 							Efect.transform.position = Col.transform.position + new Vector3 (Random.Range (-2f, 2f), Random.Range (-2f, 2f), Random.Range (-2f, 2f));
 							Col.transform.parent.parent.parent.GetComponent<PlayerScript> ().Hurt (Damage, 1, 1);
 							Hit = true;
+							if(Col.transform.parent.parent.gameObject.tag == "Foe") Col.transform.parent.parent.GetComponent<EnemyVesselScript>().Scarred = true;
 						}
 					} else if (Col.transform.parent.parent.GetComponent<EnemyVesselScript>() != null && FiredByEnemy != true && TypeofGun != "Present") {
 						if (Col.transform.parent.parent.gameObject != WhoShot) {
+							sHit = true;
 							GameObject Efect = Instantiate (Effect) as GameObject;
 							Efect.GetComponent<EffectScript> ().TypeofEffect = "BullethitPlane";
 							Efect.transform.position = Col.transform.position + new Vector3 (Random.Range (-2f, 2f), Random.Range (-2f, 2f), Random.Range (-2f, 2f));
@@ -392,7 +397,15 @@ public class ProjectileScript : MonoBehaviour {
 				ParticleSystem.MainModule EC = Efect.GetComponent<EffectScript>().PaintballHit.GetComponent<ParticleSystem>().main;
                 EC.startColor = new Color(PresentColor1.r, PresentColor1.g, PresentColor1.b, 0.25f);
                 Efect.transform.position = HitPoint;
-            }
+            } else if (TypeofGun == "Present"){
+				if(pDelivered) GS.statModify("Presents delivered", 1);
+				else {
+					GameObject.Find("MainCanvas").GetComponent<CanvasScript>().Message(GS.SetText("Present missed", "Prezent spudłował"), Color.red, new float[]{3f, 1f});
+					GS.statModify("Presents missed", 1);
+				}
+			}
+
+			if(WhoShot && WhoShot.tag == "Player" && sHit) if (sHit) GS.statModify("Shots hit", 1);
 
 		}
 

@@ -39,9 +39,12 @@ public class CanvasScript : MonoBehaviour {
     public Transform IntroWindow;
     string[] IntroTextes;
     float IntroTime = 0f;
+    // While results
+    public Transform ResultsWindow;
+    public Text ResultsText;
 	// Flash
-	public Image FlashImage;
-	public float DisappearSpeed = 1f;
+	public Image FlashImg;
+	float[] FlashDisp = {0f, 1f};
     // Flash
     // Radar/Map
     public GameObject Radar;
@@ -55,7 +58,9 @@ public class CanvasScript : MonoBehaviour {
     // Radar/Map
 	// While Playing
 	public RoundScript RS;
-	public Text Info;
+	public Text CanvasMessage;
+    float[] MessageVars = {0f, 1f, 2f}; // Time, max Time, Scale
+    public AudioClip[] MessageAudios;
 	public GameObject Musics;
 	// References
 
@@ -70,9 +75,10 @@ public class CanvasScript : MonoBehaviour {
         RS = GameObject.Find("RoundScript").GetComponent<RoundScript>();
         player = GameObject.FindGameObjectWithTag("Player").GetComponent<PlayerScript>();
         MainCamera = GameObject.Find("MainCamera").GetComponent<Camera>();
+        Flash(Color.black, new float[]{2f, 1f});
 
         // Set intro textes
-        IntroTextes = new string[] { GS.SetText("Level ", "Poziom ") + RS.Level, GS.SetText("Deliver the presents", "Dostarcz prezenty")};
+        IntroTextes = new string[] { GS.SetText("Level ", "Poziom ") + GS.Level, GS.SetText("Deliver the presents", "Dostarcz prezenty")};
         switch(GS.Level){
             case 2: IntroTextes[1] = GS.SetText("Watch out for the enemy airplanes!", "Uważaj na wrogie samoloty!"); break;
             case 5: IntroTextes[1] = GS.SetText("Watch out for the AA Guns, and the new Messerschmitt K4 planes!", "Uważaj na Bronie Przeciwlotnicze, i na nowe Messerschmitt K4"); break;
@@ -82,30 +88,81 @@ public class CanvasScript : MonoBehaviour {
         }
 
     }
+
+    public void Flash(Color SetColor, float[] SetTime, int Act = 0){
+        if(Act == 1){
+            FlashDisp[0] = Mathf.MoveTowards(FlashDisp[0], 0f, Time.deltaTime);
+            Color SA = FlashImg.color;
+            SA.a = Mathf.Lerp(0f, 1f, FlashDisp[0] / FlashDisp[1]);
+            FlashImg.color = SA;
+        } else {
+            FlashImg.color = SetColor;
+            FlashDisp = new float[]{SetTime[0], SetTime[1]};
+        }
+    }
+
+    public void Message(string setText = "", Color setColor = default, float[] setVars = default, string SoundClip = ""){
+        if(setText != ""){
+            CanvasMessage.text = setText;
+            CanvasMessage.color = setColor;
+            MessageVars[0] = MessageVars[1] = setVars[0];
+            MessageVars[2] = setVars[1];
+
+            if(SoundClip != "")
+                for(int pA = 0; pA <= MessageAudios.Length; pA++){
+                    if(pA == MessageAudios.Length){
+                        Debug.LogError("No message audio of name " + SoundClip + " found!");
+                    } else if (MessageAudios[pA].name == SoundClip){
+                        CanvasMessage.GetComponent<AudioSource>().clip = MessageAudios[pA];
+                        CanvasMessage.GetComponent<AudioSource>().Play();
+                        break;
+                    }
+                }
+
+        } else {
+            MessageVars[0] = Mathf.MoveTowards(MessageVars[0], 0, Time.deltaTime);
+            CanvasMessage.transform.localScale = Vector3.one * Mathf.Lerp(1f, MessageVars[2], ((MessageVars[0] / MessageVars[1])-0.5f) * 2f) / 2f;
+            Color SC = CanvasMessage.color;
+            SC.a = Mathf.Lerp(0f, 1f, MessageVars[0] * 4f);
+            CanvasMessage.color = SC;
+        }
+    }
 	
 	void Update(){
 
         Music();
-        FlashImage.color = Color32.Lerp (FlashImage.color, new Color32((byte)FlashImage.color.r, (byte)FlashImage.color.g, (byte)FlashImage.color.b, 0), DisappearSpeed * (Time.unscaledDeltaTime * 100f));
-        if(isPaused){
+        Flash(default, default, 1);
+        Message();
+        
+        if(RS.State == "SuccessDP"){
+            Paused();
+            Alive();
+            Intro();
+            Results(RS.State);
+            Time.timeScale = 1f;
+        } else if(isPaused){
             Paused(true);
             Alive();
             Intro();
+            Results();
             Time.timeScale = 0f;
         } else if(player != null && player.Intro <= 0f){
             Paused();
             Alive(true);
             Intro();
+            Results();
             Time.timeScale = 1f;
         } else if(player != null && player.Intro > 0f){
             Paused();
             Alive();
             Intro(true);
+            Results();
             Time.timeScale = 1f;
         } else {
             Paused();
             Alive();
             Intro();
+            Results();
             Time.timeScale = 1f;
         }
 
@@ -121,9 +178,37 @@ public class CanvasScript : MonoBehaviour {
 
     }
 
+    void Results(string view = ""){
+
+        if(view != ""){
+            ResultsWindow.localScale = Vector3.Lerp(ResultsWindow.localScale, Vector3.one, Time.unscaledDeltaTime*10f);
+            if(ResultsWindow.localScale.x > 0.9f){
+                ResultsText.color = new Color(1f,1f,1f,Mathf.MoveTowards(ResultsText.color.a, 1f, Time.unscaledDeltaTime));
+            } else {
+                ResultsText.text = GS.statModify("ReturnTemp", 0);
+                if(view == "SuccessDP") ResultsText.text += "\n" + 
+                GS.SetText("Accuracy bonus: ", "Bonus za celność: ") + (int)RS.accBonus +
+                GS.SetText("\nHealth bonus: ", "\nBonus za zdrowie: ") + (int)RS.hpBonus +
+                GS.SetText("\nMorality bonus: ", "\nBonus za moralność: ") + (int)RS.morBonus +
+                GS.SetText("\n\nScore gained: ", "\n\nUzyskany wynik: ") + RS.TempScore +
+                GS.SetText("\nPayout: ", "\nWypłata: ") + RS.TempMooney;
+            }
+
+            if(Input.anyKeyDown){
+                RS.State = "Left1";
+            }
+        } else {
+            ResultsWindow.localScale = Vector3.zero;
+            ResultsText.color = new Color(1f,1f,1f,0f);
+        }
+
+    }
+
     void Paused(bool view = false){
 
         if(view){
+
+            if(player) player.GunCooldown = Mathf.Clamp(player.GunCooldown, 1f, Mathf.Infinity);
 
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
@@ -334,6 +419,8 @@ public class CanvasScript : MonoBehaviour {
                 SteeringCircle.rectTransform.anchorMin = SteeringCircle.rectTransform.anchorMax = new Vector2 (Input.mousePosition.x / Screen.width, Input.mousePosition.y / Screen.height);
     			SteeringCircle.rectTransform.anchoredPosition = Vector2.zero;
 
+                SteeringCircle.GetComponent<Image>().color = Color.white;
+
             }
 
             if(player.WhichCamera == "Turret"){
@@ -502,19 +589,6 @@ public class CanvasScript : MonoBehaviour {
 
     }
 
-    void FixedUpdate(){
-
-        // Info
-        if (Info.color.a > 0 && (Info.transform.localScale.x > 0.49f && Info.transform.localScale.x < 0.51f)) {
-            Info.color = Color32.Lerp(Info.color, new Color32((byte)Info.color.r, (byte)Info.color.g, (byte)Info.color.b, 0), 0.01f);
-        }
-        if (Info.transform.localScale.x != 0.5f){
-            Info.transform.localScale = Vector3.Lerp(Info.transform.localScale, new Vector3(0.5f, 0.5f, 0.5f), 0.01f);
-        }
-        // Info
-
-    }
-
     void Music(){
 		
 		bool ChangeMusic = false;
@@ -541,12 +615,6 @@ public class CanvasScript : MonoBehaviour {
 			}
 		}
 
-	}
-
-	public void SetInfoText(string English, string Polish, Color32 TextColor, float Scale){
-		Info.transform.localScale = new Vector3 (Scale / 2f, Scale / 2f, Scale / 2f);
-        Info.text = GS.SetText(English, Polish);
-		Info.color = TextColor;
 	}
 
 }

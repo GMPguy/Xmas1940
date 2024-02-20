@@ -16,7 +16,6 @@ public class EnemyVesselScript : MonoBehaviour {
 	public GameObject PlayerSeen;
 	public GameObject PlayerActuall;
 	public GameObject Bullet;
-	public GameObject PlaneDead;
 	public GameObject BalloonDeadEffects;
 	public GameObject Special;
 	GameObject Camera;
@@ -32,6 +31,7 @@ public class EnemyVesselScript : MonoBehaviour {
 	public Vector3 PointofInterest;
 	float GunCooldown = 0f;
 	public float HitByAPlayer = 0f;
+	public bool Scarred = false;
     public float Paintballed = 0f;
     // Main Variables
 
@@ -220,8 +220,8 @@ public class EnemyVesselScript : MonoBehaviour {
 		}
 
 		// Values
-		if(GunCooldown > 0f) GunCooldown -= 0.01f;
-		if(HitByAPlayer > 0f) HitByAPlayer -= 0.01f;
+		if (GunCooldown > 0f) GunCooldown -= 0.01f;
+		if (HitByAPlayer > 0f) {HitByAPlayer -= 0.01f; Scarred = true;}
         if (Paintballed > 0f) Paintballed -= 0.01f;
 		// Values
 
@@ -474,7 +474,7 @@ public class EnemyVesselScript : MonoBehaviour {
 				PointofInterest = PlayerSeen.transform.position;
 				if (GunCooldown <= 0f && Paintballed <= 0f) {
 					GunCooldown = Mathf.Lerp(5f, 0.5f, Power);
-					Shoot("Flak", Lead(PlayerSeen) + Vector3.Lerp(new Vector3(Random.Range(-10f, 10f), Random.Range(0f, 5f), Random.Range(-10f, 10f)), Vector3.zero, Power), Model.transform.GetChild (0));
+					Shoot("Flak", Lead(PlayerSeen) + Vector3.Lerp(new Vector3(Random.Range(-10f, 10f), Random.Range(0f, 5f), Random.Range(-10f, 10f)), Vector3.zero, Power*2f), Model.transform.GetChild (0));
 				}
 			}
 		}
@@ -482,59 +482,60 @@ public class EnemyVesselScript : MonoBehaviour {
 
 	}
 
-	void Dead(){
+	public void Dead(bool JustCashOut = false){
 
-		if(IsDead == false){
+		bool CashOut = false;
+		if(IsDead == false && !JustCashOut){
 			IsDead = true;
-			GameObject Boom = Instantiate (Special) as GameObject;
-			Boom.GetComponent<SpecialScript> ().TypeofSpecial = "Explosion";
-			Boom.GetComponent<SpecialScript> ().ExplosionPower = 10f;
-			Boom.GetComponent<SpecialScript> ().ExplosionRadius = 4f;
-			Boom.transform.position = this.transform.position;
 			if(HitByAPlayer > 0f && PlayerActuall != null){
-				string[] Message = {"", ""};
-				int[] Scores = new int[]{0, 0};
-
-				switch(TypeofVessel){
-					case "Messerschmitt":
-						Message = new string[]{"Messerschmitt Down!", "Messerschmitt Zestrzelony!"};
-						Scores = new int[]{5, 250};
-						break;
-					case "Messerschmitt K4":
-						Message = new string[]{"Messerschmitt K4 Down!", "Messerschmitt K4 Zestrzelony!"};
-						Scores = new int[]{10, 500};
-						break;
-					case "AA Gun":
-						Message = new string[]{"AA Gun Destroyed!", "Broń Przeciwlotnicza Zniszczona!"};
-						Scores = new int[]{30, 1500};
-						break;
-					case "Balloon":
-						Message = new string[]{"Balloon Down!", "Balon Zestrzelony!"};
-						Scores = new int[]{20, 1000};
-						break;
-					case "Messerschmitt 110":
-						Message = new string[]{"Messerschmitt 110 Down!", "Messerschmitt 110 Zestrzelony!"};
-						Scores = new int[]{30, 1500};
-						break;
-					case "Messerschmitt Me 262":
-						Message = new string[]{"Messerschmitt Me 262 Down!", "Messerschmitt Me 262 Zestrzelony!"};
-						Scores = new int[]{20, 1000};
-						break;
-				}
-
-				PlayerActuall.GetComponent<PlayerScript> ().MainCanvas.GetComponent<CanvasScript> ().SetInfoText (Message[0], Message[1], new Color32(225, 225, 225, 255), 1.5f);
-				GS.GainScore (Scores[0], Scores[1], "");
+				CashOut = true;
+				GS.statModify("Enemies downed", 1);
+			} else {
+				GS.statModify("Enemies encountered", -1);
 			}
 
-			GameObject ByeBye = Instantiate(PlaneDead) as GameObject;
-			ByeBye.transform.position = this.transform.position;
-			ByeBye.transform.rotation = this.transform.rotation;
-			ByeBye.GetComponent<PlaneDead>().PreviousSpeed = Speed;
-			ByeBye.GetComponent<PlaneDead>().PreviousRotation = ElevatorFlapsRudder;
-			Model.transform.SetParent(ByeBye.transform);
-			ByeBye.GetComponent<PlaneDead>().PlaneModel = Model;
+			GameObject.Find("RoundScript").GetComponent<RoundScript>().DeadPlane(new[]{this.transform, Model.transform}, Speed, ElevatorFlapsRudder);
 			Destroy(this.gameObject);
 
+		} else if (JustCashOut && !Scarred){
+			CashOut = true;
+			GS.statModify("Enemies spared", 1);
+		}
+
+		if(CashOut){
+			string[] Message = {"", ""};
+			int Score = 0;
+
+			switch(TypeofVessel){
+				case "Messerschmitt":
+					Message = new string[]{"Messerschmitt Down!", "Messerschmitt Zestrzelony!"};
+					Score = 5;
+					break;
+				case "Messerschmitt K4":
+					Message = new string[]{"Messerschmitt K4 Down!", "Messerschmitt K4 Zestrzelony!"};
+					Score = 10;
+					break;
+				case "AA Gun":
+					Message = new string[]{"AA Gun Destroyed!", "Broń Przeciwlotnicza Zniszczona!"};
+					Score = 30;
+					break;
+				case "Balloon":
+					Message = new string[]{"Balloon Down!", "Balon Zestrzelony!"};
+					Score = 20;
+					break;
+				case "Messerschmitt 110":
+					Message = new string[]{"Messerschmitt 110 Down!", "Messerschmitt 110 Zestrzelony!"};
+					Score = 30;
+					break;
+				case "Messerschmitt Me 262":
+					Message = new string[]{"Messerschmitt Me 262 Down!", "Messerschmitt Me 262 Zestrzelony!"};
+					Score = 20;
+					break;
+			}
+
+			if (!JustCashOut) PlayerActuall.GetComponent<PlayerScript> ().mainCanvas.Message(GS.SetText(Message[0], Message[1]), Color.white, new float[]{2f, 1.5f});
+			GS.GainScore (Score);
+			GS.statModify(TypeofVessel + " take downs", 1);
 		}
 
 	}
