@@ -24,6 +24,8 @@ public class GameScript : MonoBehaviour {
 	// Options
 
 	// Game
+	public string Name;
+	public int GameMode = 0; // 0 Campaign, 1 Endless, 2 Skirmish
 	public Stat[] Statistics;
 	public int Level = 1;
 	public int DifficultyLevel = 1;
@@ -33,19 +35,19 @@ public class GameScript : MonoBehaviour {
     public int TempMooney = 0;
     public int Parachutes = 0;
 
-	public string CurrentPlaneModel = "BP Mark.I";
+	public int CurrentPlaneModel = 0;
 	public string OwnedPlaneModels = "10000";
-	public string CurrentEngineModel = "Basic Propeller";
+	public int CurrentEngineModel = 0;
 	public string OwnedEngineModels = "10000";
-	public string CurrentGunType = "Vickers";
+	public int CurrentGunType = 0;
 	public string OwnedGundTypes = "10000";
-	public string CurrentPresentCannonType = "Slingshot";
+	public int CurrentPresentCannonType = 0;
 	public string OwnedPresentCannonTypes = "100";
-	public string CurrentSpecialType = "None";
+	public int CurrentSpecialType = 0;
 	public string OwnedSpecialTypes = "10000";
-	public string CurrentAddition = "None";
+	public int CurrentAddition = 0;
 	public string OwnedAdditions = "10000";
-	public string CurrentPaint = "Basic Paint";
+	public int CurrentPaint = 0;
 	public string OwnedPaints = "10000";
 	// Game
 
@@ -192,8 +194,11 @@ public class GameScript : MonoBehaviour {
 	}
 
 	public void SetGameOptions(string Which, string File){
+		File += "-" + Version + "-" + Build;
 		if(Which == "Empty"){
 			PlayerPrefs.SetInt (File + "SavedGame", 0);
+			Name = "TestSave";
+			GameMode = 1;
 			Level = 1;
 			DifficultyLevel = 1;
 			CurrentScore = 0;
@@ -201,43 +206,49 @@ public class GameScript : MonoBehaviour {
 			Mooney = 0;
             TempMooney = 0;
             Parachutes = 3;
-			CurrentPlaneModel = "BP Mark.I";
+			CurrentPlaneModel = 0;
 			OwnedPlaneModels = "100000000000000000000000000000";
-			CurrentEngineModel = "Basic Propeller";
+			CurrentEngineModel = 0;
 			OwnedEngineModels = "100000000000000000000000000000";
-			CurrentGunType = "Vickers";
+			CurrentGunType = 0;
 			OwnedGundTypes = "100000000000000000000000000000";
-			CurrentPresentCannonType = "Slingshot";
+			CurrentPresentCannonType = 0;
 			OwnedPresentCannonTypes = "100000000000000000000000000000";
-			CurrentSpecialType = "None";
+			CurrentSpecialType = 0;
 			OwnedSpecialTypes = "100000000000000000000000000000";
-			CurrentAddition = "None";
+			CurrentAddition = 0;
 			OwnedAdditions = "100000000000000000000000000000";
-			CurrentPaint = "Basic Paint";
+			CurrentPaint = 0;
 			OwnedPaints = "100000000000000000000000000000";
+			statModify("SetUp", 0);
 		} else if(Which == "Save"){
 			PlayerPrefs.SetInt (File + "SavedGame", 1);
+			PlayerPrefs.SetString (File + "Name", Name);
+			PlayerPrefs.SetInt (File + "Mode", GameMode);
 			PlayerPrefs.SetInt (File + "Level", Level);
 			PlayerPrefs.SetInt (File + "DifficultyLevel", DifficultyLevel);
 			PlayerPrefs.SetInt (File + "CurrentScore", CurrentScore);
 			PlayerPrefs.SetInt (File + "Mooney", Mooney);
             PlayerPrefs.SetInt (File + "Parachutes", Parachutes);
-			PlayerPrefs.SetString (File + "CurrentPlaneModel", CurrentPlaneModel);
+			PlayerPrefs.SetInt (File + "CurrentPlaneModel", CurrentPlaneModel);
 			PlayerPrefs.SetString (File + "OwnedPlaneModels", OwnedPlaneModels);
-			PlayerPrefs.SetString (File + "CurrentEngineModel", CurrentEngineModel);
+			PlayerPrefs.SetInt (File + "CurrentEngineModel", CurrentEngineModel);
 			PlayerPrefs.SetString (File + "OwnedEngineModels", OwnedEngineModels);
-			PlayerPrefs.SetString (File + "CurrentGunType", CurrentGunType);
+			PlayerPrefs.SetInt (File + "CurrentGunType", CurrentGunType);
 			PlayerPrefs.SetString (File + "OwnedGunTypes", OwnedGundTypes);
-			PlayerPrefs.SetString (File + "CurrentPresentCannonType", CurrentPresentCannonType);
+			PlayerPrefs.SetInt (File + "CurrentPresentCannonType", CurrentPresentCannonType);
 			PlayerPrefs.SetString (File + "OwnedPresentCannonTypes", OwnedPresentCannonTypes);
-			PlayerPrefs.SetString (File + "CurrentSpecialType", CurrentSpecialType);
+			PlayerPrefs.SetInt (File + "CurrentSpecialType", CurrentSpecialType);
 			PlayerPrefs.SetString (File + "OwnedSpecialTypes", OwnedSpecialTypes);
-			PlayerPrefs.SetString (File + "CurrentAddition", CurrentAddition);
+			PlayerPrefs.SetInt (File + "CurrentAddition", CurrentAddition);
 			PlayerPrefs.SetString (File + "OwnedAdditions", OwnedAdditions);
-			PlayerPrefs.SetString (File + "CurrentPaint", CurrentPaint);
+			PlayerPrefs.SetInt (File + "CurrentPaint", CurrentPaint);
 			PlayerPrefs.SetString (File + "OwnedPaints", OwnedPaints);
+			PlayerPrefs.SetString (File + "Statistics", statModify("Save", 0, File));
 		} else if(Which == "Load"){
 			PlayerPrefs.SetInt (File + "SavedGame", 1);
+			Name = PlayerPrefs.GetString (File + "Name");
+			GameMode = PlayerPrefs.GetInt (File + "Mode");
 			Level = PlayerPrefs.GetInt (File + "Level");
 			DifficultyLevel = PlayerPrefs.GetInt (File + "DifficultyLevel");
 			CurrentScore = PlayerPrefs.GetInt (File + "CurrentScore");
@@ -245,22 +256,25 @@ public class GameScript : MonoBehaviour {
 			Mooney = PlayerPrefs.GetInt (File + "Mooney");
             TempMooney = 0;
             Parachutes = PlayerPrefs.GetInt(File + "Parachutes");
-			CurrentPlaneModel = PlayerPrefs.GetString (File + "CurrentPlaneModel");
+			CurrentPlaneModel = PlayerPrefs.GetInt (File + "CurrentPlaneModel");
 			OwnedPlaneModels = PlayerPrefs.GetString (File + "OwnedPlaneModels");
-			CurrentEngineModel = PlayerPrefs.GetString (File + "CurrentEngineModel");
+			CurrentEngineModel = PlayerPrefs.GetInt (File + "CurrentEngineModel");
 			OwnedEngineModels = PlayerPrefs.GetString (File + "OwnedEngineModels");
-			CurrentGunType = PlayerPrefs.GetString (File + "CurrentGunType");
+			CurrentGunType = PlayerPrefs.GetInt (File + "CurrentGunType");
 			OwnedGundTypes = PlayerPrefs.GetString (File + "OwnedGunTypes");
-			CurrentPresentCannonType = PlayerPrefs.GetString (File + "CurrentPresentCannonType");
+			CurrentPresentCannonType = PlayerPrefs.GetInt (File + "CurrentPresentCannonType");
 			OwnedPresentCannonTypes = PlayerPrefs.GetString (File + "OwnedPresentCannonTypes");
-			CurrentSpecialType = PlayerPrefs.GetString (File + "CurrentSpecialType");
+			CurrentSpecialType = PlayerPrefs.GetInt (File + "CurrentSpecialType");
 			OwnedSpecialTypes = PlayerPrefs.GetString (File + "OwnedSpecialTypes");
-			CurrentAddition = PlayerPrefs.GetString (File + "CurrentAddition");
+			CurrentAddition = PlayerPrefs.GetInt (File + "CurrentAddition");
 			OwnedAdditions = PlayerPrefs.GetString (File + "OwnedAdditions");
-			CurrentPaint = PlayerPrefs.GetString (File + "CurrentPaint");
+			CurrentPaint = PlayerPrefs.GetInt (File + "CurrentPaint");
 			OwnedPaints = PlayerPrefs.GetString (File + "OwnedPaints");
+			statModify("Load", 0, File + "Statistics");
 		} else if (Which == "Erase"){
 			PlayerPrefs.DeleteKey (File + "SavedGame");
+			PlayerPrefs.DeleteKey (File + "Name");
+			PlayerPrefs.DeleteKey (File + "Mode");
 			PlayerPrefs.DeleteKey (File + "Level");
 			PlayerPrefs.DeleteKey (File + "DifficultyLevel");
 			PlayerPrefs.DeleteKey (File + "CurrentScore");
@@ -280,6 +294,8 @@ public class GameScript : MonoBehaviour {
 			PlayerPrefs.DeleteKey (File + "OwnedAdditions");
 			PlayerPrefs.DeleteKey (File + "CurrentPaint");
 			PlayerPrefs.DeleteKey (File + "OwnedPaints");
+			PlayerPrefs.DeleteKey (File + "Statistics");
+			statModify("SetUp", 0);
 		}
 	}
 
@@ -366,15 +382,15 @@ public class GameScript : MonoBehaviour {
 					
 					case "Master":
 						currText.text = SetText("Master volume: ", "Ogólna głośność: ") + Mathf.Round(Volumes[0]*100f) + "%";
-						if(Click!=0) Volumes[0] = (1f + Volumes[0] + Click/10f) % 1.1f;
+						if(Click!=0) Volumes[0] = (1f + Volumes[0] + Click/20f) % 1f;
 						break;
 					case "Music":
 						currText.text = SetText("Music volume: ", "Głośność muzyki: ") + Mathf.Round(Volumes[1]*100f) + "%";
-						if(Click!=0) Volumes[1] = (1f + Volumes[1] + Click/10f) % 1.1f;
+						if(Click!=0) Volumes[1] = (1f + Volumes[1] + Click/20f) % 1f;
 						break;
 					case "SFX":
 						currText.text = SetText("Sound effects: ", "Efekty dźwiękowe: ") + Mathf.Round(Volumes[2]*100f) + "%";
-						if(Click!=0) Volumes[2] = (1f + Volumes[2] + Click/10f) % 1.1f;
+						if(Click!=0) Volumes[2] = (1f + Volumes[2] + Click/20f) % 1f;
 						break;
 					
 					case "Controls":
@@ -531,7 +547,7 @@ public class GameScript : MonoBehaviour {
 
 	}
 
-	public string statModify(string Name, int Value){
+	public string statModify(string Name, int Value, string filename = ""){
 
 		switch(Name){
 
@@ -566,6 +582,27 @@ public class GameScript : MonoBehaviour {
 					if(Name == "ReturnTemp") raList += WriteStats.ReceiveName(true, "\n");
 					else raList += WriteStats.ReceiveName(false, "\n");
 				return raList;
+
+			case "Save":
+				string theFile = "";
+				for(int ss = 0; ss < Statistics.Length; ss++){
+					theFile += Statistics[ss].Score + ";";
+				}
+				return theFile;
+
+			case "Load":
+				string[] decode = new string[] {PlayerPrefs.GetString(filename), ""};
+				int checkCurr = 0;
+				for(int dec = 0; dec < decode[0].Length; dec++){
+					if(decode[0][dec] == ';'){
+						Statistics[checkCurr].Score = int.Parse(decode[1]);
+						decode[1] = "";
+						checkCurr ++;
+					} else {
+						decode[1] += decode[0][dec];
+					}
+				}
+				return "";
 
 			default: // change
 				for(int fn = 0; fn <= Statistics.Length; fn++){

@@ -33,7 +33,7 @@ public class BuyButtonScript : MonoBehaviour {
 	}
 	
 	// Update is called once per frame
-	void Update () {
+	/*void Update () {
 
 		Sett ();
 
@@ -145,6 +145,6 @@ public class BuyButtonScript : MonoBehaviour {
 		if(Sample.Substring(Index, 1) == "1") Owned = true;
 		else Owned = false;
 
-	}
+	}*/
 
 }

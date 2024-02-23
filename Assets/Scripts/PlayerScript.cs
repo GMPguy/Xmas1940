@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Services.Analytics;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -8,6 +9,7 @@ public class PlayerScript : MonoBehaviour {
 
 	// References
 	public GameScript GS;
+	public ItemClasses IC;
 	public RoundScript RS;
 	public GameObject PlaneModels;
 	public GameObject CurrentPlane;
@@ -29,13 +31,20 @@ public class PlayerScript : MonoBehaviour {
 	// References
 
 	// Plane options
-	public string PlaneModel = "BP Mark.I";
+	ItemClasses.PlaneModel PlaneModel;
+	ItemClasses.Engine EngineModel;
+	ItemClasses.Gun GunType;
+	ItemClasses.Present PresentType;
+	ItemClasses.Special SpecialType;
+	ItemClasses.Special Addition;
+	ItemClasses.Paint Paint;
+	/*public string PlaneModel = "BP Mark.I";
 	public string EngineModel = "Basic Propeller";
 	public string GunType = "Vickers";
 	public string PresentCannonType = "Slingshot";
 	public string SpecialType = "None";
 	public string Addition = "None";
-	public string Paint = "Basic Paint";
+	public string Paint = "Basic Paint";*/
 	// Plane options
 
 	// Stats
@@ -63,7 +72,7 @@ public class PlayerScript : MonoBehaviour {
 	public float Speed = 0f;
 	public float RotationSpeed = 1f;
 
-	public string AirplaneClass;
+	public int AirplaneClass;
 	// Stats
 
 	// Mechanics
@@ -105,15 +114,16 @@ public class PlayerScript : MonoBehaviour {
 	void Start () {
 
 		GS = GameObject.Find("GameScript").GetComponent<GameScript>();
+		IC = GS.GetComponent<ItemClasses>();
 		RS = GameObject.Find("RoundScript").GetComponent<RoundScript>();
 
-		PlaneModel = GS.CurrentPlaneModel;
-		EngineModel = GS.CurrentEngineModel;
-		GunType = GS.CurrentGunType;
-		PresentCannonType = GS.CurrentPresentCannonType;
-		SpecialType = GS.CurrentSpecialType;
-		Addition = GS.CurrentAddition;
-		Paint = GS.CurrentPaint;
+		PlaneModel = IC.PlaneModels[GS.CurrentPlaneModel];
+		EngineModel = IC.EngineModels[GS.CurrentEngineModel];
+		GunType = IC.Guns[GS.CurrentGunType];
+		PresentType = IC.Presents[GS.CurrentPresentCannonType];
+		SpecialType = IC.Specials[GS.CurrentSpecialType];
+		Addition = IC.Additions[GS.CurrentAddition];
+		Paint = IC.Paints[GS.CurrentPaint];
 
 		mainCanvas = GameObject.Find ("MainCanvas").GetComponent<CanvasScript>();
 		PlaneSettings (1);
@@ -154,17 +164,17 @@ public class PlayerScript : MonoBehaviour {
 		}
         float LowFuelMultiplier;
         if (Fuel > (MaxFuel / 5f)) {
-            if (Addition == "Boost") LowFuelMultiplier = 1.5f;
+            if (Addition.Names[0] == "Boost") LowFuelMultiplier = 1.5f;
             else LowFuelMultiplier = 1f;
 		} else {
-            if (Addition == "Boost") LowFuelMultiplier = Fuel / MaxFuel / 5f * 1.5f;
+            if (Addition.Names[0] == "Boost") LowFuelMultiplier = Fuel / MaxFuel / 5f * 1.5f;
             else LowFuelMultiplier = Fuel / (MaxFuel / 5f);
 		}
 
 		if (Health > (MaxHealth / 3f)) Throttle = Mathf.Clamp (Throttle, 0.004f,LowFuelMultiplier);
 		else if ((Health / MaxHealth) <= (Fuel / MaxFuel)) Throttle = Mathf.Clamp (Throttle, 0.004f, (0.75f + (Health / MaxHealth * 0.25f)) * LowFuelMultiplier);
 
-        if (Addition == "Boost") {
+        if (Addition.Names[0] == "Boost") {
             if (Throttle > 1f) {
                 ShakePower = (Throttle - 1f) * 0.5f;
                 ShakeDecay = 0.1f;
@@ -175,7 +185,7 @@ public class PlayerScript : MonoBehaviour {
 		if(GunCooldown > -1f)GunCooldown -= 0.02f;
 		if(Flares > 0f) Flares -= 0.01f;
 		if(PresentCooldown > 0f){
-			if (AirplaneClass == "Bomber") {
+			if (AirplaneClass == 1) {
 				PresentCooldown -= 0.03f;
 			} else {
 				PresentCooldown -= 0.01f;
@@ -192,7 +202,7 @@ public class PlayerScript : MonoBehaviour {
 				if (Input.GetButton("Free Look")) {
 	            	WhichCamera = "Free";
 				} else if (Input.GetButton("Aim")) {
-	    	        if (Addition == "Turret"){
+	    	        if (Addition.Names[0] == "Turret"){
     	    	        WhichCamera = "Turret";
 					} else {
 						WhichCamera = "Aim";
@@ -216,7 +226,7 @@ public class PlayerScript : MonoBehaviour {
     	    	    if (Input.GetButton("Free Look")) FreeLook.transform.localRotation = Quaternion.Lerp(FreeLook.transform.localRotation, Quaternion.Euler(-90f * SteerPosition.y, 180f * SteerPosition.x, 0f), 0.1f);
         		    else FreeLook.transform.localRotation = Quaternion.Lerp(FreeLook.transform.localRotation, Quaternion.identity, 0.5f);
 					// Rotate Camera
-				} else if(Input.GetButton("Aim") && Addition == "Turret"){
+				} else if(Input.GetButton("Aim") && Addition.Names[0] == "Turret"){
         		    WhichCamera = "Turret";
         	        Camera.transform.position = Turret.transform.GetChild(0).position + (ShakeScreen / 10f);
     	        	Camera.transform.rotation = Turret.transform.GetChild(0).rotation;
@@ -257,12 +267,12 @@ public class PlayerScript : MonoBehaviour {
 
         float DesiredPOV;
         if (WhichCamera == "Aim" || WhichCamera == "Turret") {
-			if (Addition == "Zoom") DesiredPOV = 10f;
+			if (Addition.Names[0] == "Zoom") DesiredPOV = 10f;
 			else DesiredPOV = 30f;
 		} else {
 			if(WhichCamera == "Free") DesiredPOV = 80f;
 			else DesiredPOV = 60f;
-            if (Addition == "Turret" && WhichCamera != "Turret") {
+            if (Addition.Names[0] == "Turret" && WhichCamera != "Turret") {
                 Turret.transform.GetChild(3).gameObject.SetActive(false);
                 Turret.transform.GetChild(1).gameObject.SetActive(true);
                 Turret.transform.GetChild(2).gameObject.SetActive(false);
@@ -349,7 +359,7 @@ public class PlayerScript : MonoBehaviour {
 			GS.Parachutes -= 1;
             if (GS.Parachutes <= 0){
                 GS.PreviousScore = GS.CurrentScore;
-                GS.PreviousPlane = PlaneModel;
+                GS.PreviousPlane = PlaneModel.Names[0];
                 if (GS.PreviousScore > GS.HighScore)
                     GS.HighScore = GS.PreviousScore;
             } else {
@@ -387,7 +397,7 @@ public class PlayerScript : MonoBehaviour {
 		// Beyond Map
 
 		// Fuel
-		if(Throttle > 0f && EngineModel != "Magic Reindeer Dust")
+		if(Throttle > 0f && EngineModel.Names[0] != "Magic Reindeer Dust")
 			Fuel -= Throttle / 100f * (float)GS.DifficultyLevel;
 		// Fuel
 
@@ -397,7 +407,7 @@ public class PlayerScript : MonoBehaviour {
 
 
 		foreach(Transform SelectedPlane in PlaneModels.transform){
-			if (SelectedPlane.gameObject.name == PlaneModel) {
+			if (SelectedPlane.gameObject.name == PlaneModel.Names[0]) {
 				CurrentPlane = SelectedPlane.gameObject;
 				foreach(Material Mat in SelectedPlane.GetChild(0).GetComponent<MeshRenderer>().materials){
 					if(Mat.name == "PlaneColor1 (Instance)"){
@@ -418,7 +428,7 @@ public class PlayerScript : MonoBehaviour {
                     	AimPart = SelectedPart.gameObject;
 						break;
             	    case "Turret":
-        	            if (Addition == "Turret") {
+        	            if (Addition.Names[0] == "Turret") {
     	                    SelectedPart.gameObject.SetActive(true);
 	                        Turret = SelectedPart.gameObject;
                         	foreach (Material Mat in Turret.transform.GetChild(1).GetComponent<MeshRenderer>().materials) {
@@ -441,7 +451,7 @@ public class PlayerScript : MonoBehaviour {
 						PresentCannon = SelectedPart.gameObject;
 						break;
 					case "Basic Propeller":
-						if (EngineModel == "Basic Propeller") {
+						if (EngineModel.Names[0] == "Basic Propeller") {
 							SelectedPart.gameObject.SetActive (true);
 							SelectedPart.transform.Rotate (new Vector3 (Speed / -10f, 0f, 0f));
 							SelectedPart.gameObject.GetComponent<AudioSource> ().pitch = (Speed / MaxSpeed / 2f) * Throttle;
@@ -452,7 +462,7 @@ public class PlayerScript : MonoBehaviour {
 						}
 						break;
 					case "Double Propeller":
-						if (EngineModel == "Double Propeller") {
+						if (EngineModel.Names[0] == "Double Propeller") {
 							SelectedPart.gameObject.SetActive (true);
 							foreach(Material Mat in SelectedPart.GetComponent<MeshRenderer>().materials){
 								if(Mat.name == "PlaneColor1 (Instance)")
@@ -469,7 +479,7 @@ public class PlayerScript : MonoBehaviour {
 						}
 						break;
 					case "Jet Engine":
-						if (EngineModel == "Jet Engine") {
+						if (EngineModel.Names[0] == "Jet Engine") {
 							SelectedPart.gameObject.SetActive (true);
 							foreach(Material Mat in SelectedPart.GetComponent<MeshRenderer>().materials){
 								if(Mat.name == "PlaneColor1 (Instance)")
@@ -487,7 +497,7 @@ public class PlayerScript : MonoBehaviour {
 						}
 						break;
 					case "Double Jet Engine":
-						if (EngineModel == "Double Jet Engine") {
+						if (EngineModel.Names[0] == "Double Jet Engine") {
 							SelectedPart.gameObject.SetActive (true);
 							foreach(Material Mat in SelectedPart.GetComponent<MeshRenderer>().materials){
 								if(Mat.name == "PlaneColor1 (Instance)"){
@@ -506,7 +516,7 @@ public class PlayerScript : MonoBehaviour {
 						}
 						break;
 					case "Magic Reindeer Dust":
-						if (EngineModel == "Magic Reindeer Dust") {
+						if (EngineModel.Names[0] == "Magic Reindeer Dust") {
 							SelectedPart.gameObject.SetActive (true);
 							float SetPitch = Mathf.Clamp ((Speed / MaxSpeed) * Throttle, 0.75f, 2f);
 							SelectedPart.gameObject.GetComponent<AudioSource> ().pitch = SetPitch;
@@ -692,23 +702,23 @@ public class PlayerScript : MonoBehaviour {
 					GameObject TurretBullet = Shoot("Main", PickedPosition, Turret.transform.GetChild(0).GetChild(0), PickedPosition + Camera.transform.forward);
                     GunCooldown = MaxGunCooldown;
 					Heat += MaxGunCooldown;
-                    if (GunType == "Paintball") TurretBullet.GetComponent<ProjectileScript>().PresentColor1 = Color.HSVToRGB(Random.Range(0f, 1f), 1f, 0.5f);
+                    if (GunType.Names[0] == "Paintball") TurretBullet.GetComponent<ProjectileScript>().PresentColor1 = Color.HSVToRGB(Random.Range(0f, 1f), 1f, 0.5f);
                 } else {
                     GameObject PickedGun = Guns.ToArray()[Random.Range(0, Guns.Count)];
 					GameObject MainBullet = Shoot("Main", PickedGun.transform.position, PickedGun.transform, PickedGun.transform.position + this.transform.forward);
-                    if (AirplaneClass == "Striker") {
+                    if (AirplaneClass == 2) {
                         GunCooldown = MaxGunCooldown / 2 / AmountOfGuns;
 						Heat += MaxGunCooldown / 2 / AmountOfGuns;
                     } else {
                         GunCooldown = MaxGunCooldown / AmountOfGuns;
 						Heat += MaxGunCooldown / AmountOfGuns;
                     }
-                    if (GunType == "Paintball") MainBullet.GetComponent<ProjectileScript>().PresentColor1 = Color.HSVToRGB(Random.Range(0f, 1f), 1f, 0.5f);
+                    if (GunType.Names[0] == "Paintball") MainBullet.GetComponent<ProjectileScript>().PresentColor1 = Color.HSVToRGB(Random.Range(0f, 1f), 1f, 0.5f);
                 }
-				if(GunType == "Cannon" || GunType == "Jet Gun"){
+				if(GunType.Names[0] == "Cannon" || GunType.Names[0] == "Jet Gun"){
 					ShakePower = 0.5f;
 					ShakeDecay = 0.05f;
-				} else if(GunType == "Flak"){
+				} else if(GunType.Names[0] == "Flak"){
 					ShakePower = 1f;
 					ShakeDecay = 0.1f;
 				} else {
@@ -721,46 +731,34 @@ public class PlayerScript : MonoBehaviour {
 			if(PresentCooldown <= 0f){
 				PresentCooldown = MaxPresentCooldown;
 
-				GameObject Present = Shoot("Present", PresentCannon.transform.position, PresentCannon.transform, PresentCannon.transform.position + this.transform.forward);
-				if(PresentCannonType == "Homing Present"){
-					float Distance = 400f;
-					GameObject ChoosenTarget = null;
-					foreach(GameObject HomeA in GameObject.FindGameObjectsWithTag("HomeUnchecked")){
-						if(Vector3.Distance(this.transform.position, HomeA.transform.position) < Distance){
-							Distance = Vector3.Distance(this.transform.position, HomeA.transform.position);
-							ChoosenTarget = HomeA;
-						}
-					}
-					if(ChoosenTarget != null){
-						Present.transform.LookAt(ChoosenTarget.transform.position);
-					}
-				}
-				if(PresentCannonType == "Slingshot" || PresentCannonType == "Cannon" || PresentCannonType == "Sniper Rifle" || PresentCannonType == "Homing Present"){
+				GameObject Present = Shoot(PresentType.Names[0], PresentCannon.transform.position, PresentCannon.transform, PresentCannon.transform.position + this.transform.forward);
+
+				if(PresentType.Type == 0){
 					ShakePower = 1f;
 					ShakeDecay = 0.1f;
 				}
 			}
 		}
 		if(Input.GetButton("Special")){
-            if (SpecialType == "None"){
+            if (SpecialType.Names[0] == "None"){
 				mainCanvas.Message(GS.SetText("You don't have any specials!", "Nie masz żadnych specjalnych przedmiotów!"), Color.red, new float[]{3f, 1f});
 			}
             if (SpecialCooldown <= 0f){
 				SpecialCooldown = MaxSpecialCooldown;
-                if(SpecialType == "Wrenches"){
+                if(SpecialType.Names[0] == "Wrenches"){
 					Health += MaxHealth / 2f;
 					mainCanvas.Flash(Color.green, new float[]{0.5f, 1f});
-				} else if(SpecialType == "Fuel Tank"){
+				} else if(SpecialType.Names[0] == "Fuel Tank"){
 					Fuel = MaxFuel;
 					mainCanvas.Flash(new Color(0f, 0.5f, 1f, 1f), new float[]{0.5f, 1f});
-				} else if(SpecialType == "Homing Missile"){
+				} else if(SpecialType.Names[0] == "Homing Missile"){
 					Shoot("Homing Missile", PresentCannon.transform.position + (this.transform.forward * 15f), PresentCannon.transform, PresentCannon.transform.position + this.transform.forward * 16f);
-				} else if(SpecialType == "Flares"){
+				} else if(SpecialType.Names[0] == "Flares"){
 					GameObject Bullet = Instantiate (Special) as GameObject;
 					Bullet.transform.position = this.transform.position;
 					Bullet.GetComponent<SpecialScript> ().TypeofSpecial = "Flares";
 					Flares = 10f;
-				} else if(SpecialType == "Brick"){
+				} else if(SpecialType.Names[0] == "Brick"){
 					Shoot("Brick", this.transform.position, this.transform, this.transform.position + this.transform.forward);
                 }
 			}
@@ -778,7 +776,7 @@ public class PlayerScript : MonoBehaviour {
         Bullet.GetComponent<ProjectileScript>().PreviusSpeed = Speed;
 		switch(TypeofGun){
 			case "Main":
-				Bullet.GetComponent<ProjectileScript>().TypeofGun = GunType;
+				Bullet.GetComponent<ProjectileScript>().TypeofGun = GunType.Names[0];
 				GS.statModify("Shots fired", 1);
 				break;
 			case "Present":
@@ -794,99 +792,31 @@ public class PlayerScript : MonoBehaviour {
 		return Bullet;
 	}
 
-	void PlaneData(float a, float b, float c, float d, string classa){
+	void PlaneData(float a, float b, float c, float d, int classa){
 		MaxFuel = a; MaxHealth = b; RotationSpeed = c; MaxSpeed = d; AirplaneClass = classa;
 	}
 
 	void SetStats(){
 
-		switch(PlaneModel){
-			case "BP Mark.I": PlaneData(180f, 100f, 1f, 150f, "Fighter"); break;
-			case "BP Bomber V.I": PlaneData(200f, 200f, 0.75f, 100f, "Bomber"); break;
-			case "Monobird Striker": PlaneData(100f, 75f, 0.75f, 200f, "Striker"); break;
-			case "Monobird B1": PlaneData(300f, 350f, 0.75f, 175f, "Bomber"); break;
-			case "PukeFlame": PlaneData(110f, 100f, 0.75f, 300f, "Striker"); break;
-			case "Tornado": PlaneData(200f, 150f, 1.25f, 180f, "Fighter"); break;
-			case "Bob": PlaneData(500f, 500f, 0.5f, 200f, "Bomber"); break;
-			case "Falcon G2": PlaneData(200f, 200f, 1.5f, 200f, "Fighter"); break;
-			case "Falcon Dart": PlaneData(150f, 150f, 0.5f, 400f, "Striker"); break;
-			case "SP Albatross": PlaneData(500f, 750f, 0.35f, 250f, "Bomber"); break;
-			case "SP Arrow": PlaneData(150f, 175f, 0.5f, 600f, "Striker"); break;
-			case "SP Eagle": PlaneData(250f, 250f, 2f, 225f, "Fighter"); break;
-			case "Stolen Messerschmitt": PlaneData(200f, 150f, 1f, 180f, "Fighter"); break;
-			case "Stolen Messerschmitt 110": PlaneData(100f, 100f, 1f, 200f, "Striker"); break;
-			case "Stolen Messerschmitt Me 262": PlaneData(100f, 100f, 0.75f, 400f, "Striker"); break;
-		}
+		PlaneData(PlaneModel.Fuel, PlaneModel.Health, PlaneModel.RotationSpeed, PlaneModel.Speed, PlaneModel.Class);
+		MaxSpeed *= EngineModel.SpeedMultiplier; RotationSpeed *= EngineModel.SpeedMultiplier;
 
-		switch(EngineModel){
-			case "Double Propeller": MaxSpeed *= 1.25f; RotationSpeed *= 1.25f; break;
-			case "Jet Engine": MaxSpeed *= 1.5f; RotationSpeed *= 1.5f; break;
-			case "Double Jet Engine": MaxSpeed *= 1.75f; RotationSpeed *= 1.75f; break;
-			case "Magic Reindeer Dust": MaxSpeed *= 2f; RotationSpeed *= 2f; break;
-		}
+		GunDistane = Random.Range(GunType.Range[0], GunType.Range[1]);
+		MaxGunCooldown = GunType.Cooldown[0];
+		MaxHeat = GunType.Cooldown[1];
+		HeatDispare = GunType.Cooldown[2];
 
-		float[] GTvars = new float[]{0f, 0f, 0f};
-		switch(GunType){
-			case "Vickers": GTvars = new float[]{400f, 0.1f, 3f, 5f}; break;
-			case "M2 Browning": GTvars = new float[]{600f, 0.075f, 3f, 5f}; break;
-			case "M3 Browning": GTvars = new float[]{600f, 0.075f, 5f, 5f}; break;
-			case "Cannon": GTvars = new float[]{300f, 0.2f, 3f, 6f}; break;
-			case "Flammable": GTvars = new float[]{400f, 0.1f, 3f, 5f}; break;
-			case "Mugger Missiles": GTvars = new float[]{400f, 0.1f, 3f, 5f}; break;
-			case "Flak": GTvars = new float[]{750f, 0.4f, 30f, 9999f}; break;
-			case "Jet Gun": GTvars = new float[]{1000f, 0.05f, 7.5f, 5f}; break;
-			case "Laser": GTvars = new float[]{500f, 0.075f, 15f, 9999f}; break;
-	        case "Blue Laser": GTvars = new float[]{1000f, 0.075f, 15f, 9999f}; break;
-			case "Paintball": GTvars = new float[]{600f, 0.1f, 5f, 10f}; break;
-			case "Rocket": GTvars = new float[]{600f, 0.4f, 15f, 9999f}; break;
-		}
-		GunDistane = GTvars[0];
-		MaxGunCooldown = GTvars[1];
-		MaxHeat = GTvars[2];
-		HeatDispare = GTvars[3];
+		PresentCannonDistane = PresentType.Range;
+		MaxPresentCooldown = PresentType.Cooldown;
 
-		float[] PCvars = new float[]{0f, 0f};
-		switch(PresentCannonType){
-			case "Slingshot": PCvars = new float[]{400f, 10f}; break;
-			case "Cannon": PCvars = new float[]{1000f, 10f}; break;
-			case "Sniper Rifle": PCvars = new float[]{10000f, 30f}; break;
-			case "Homing Present": PCvars = new float[]{400f, 30f}; break;
-		}
-		PresentCannonDistane = PCvars[0];
-		MaxPresentCooldown = PCvars[1];
+		MaxSpecialCooldown = SpecialType.Cooldown;
+		SpecialRequiredAmmo = 1;
 
-		float[] SpecVars = new float[]{0f, 0f};
-		switch(SpecialType){
-			case "None": SpecVars = new float[]{10f, 100000000f}; break;
-			case "Wrenches": SpecVars = new float[]{10f, 25f}; break;
-			case "Fuel Tank": SpecVars = new float[]{10f, 25f}; break;
-			case "Homing Missile": SpecVars = new float[]{30f, 50f}; break;
-			case "Flares": SpecVars = new float[]{30f, 25f}; break;
-			case "Brick": SpecVars = new float[]{10f, 0f}; break;
-		}
-		MaxSpecialCooldown = SpecVars[0];
-		SpecialRequiredAmmo = (int)SpecVars[1];
+		PlaneColor1 = Paint.Paints[0];
+		PlaneColor2 = Paint.Paints[1];
 
-		Color32[] PC = new Color32[]{};
-		switch(Paint){
-			case "Basic Paint": PC = new Color32[]{ new(200, 200, 200, 255), new(200, 100, 100, 255)}; break;
-			case "Present Colors": PC = new Color32[]{ new(0, 125, 0, 255), new(200, 0, 0, 255)}; break;
-			case "Monochrome": PC = new Color32[]{ new(100, 100, 100, 255), new(55, 55, 55, 255)}; break;
-			case "Night": PC = new Color32[]{ new(0, 100, 200, 255), new(5, 5, 55, 255)}; break;
-			case "War Paint": PC = new Color32[]{ new(100, 175, 0, 255), new(55, 75, 55, 255)}; break;
-			case "Toy Paint": PC = new Color32[]{ new(0, 100, 200, 255), new(200, 0, 0, 255)}; break;
-			case "Girly": PC = new Color32[]{ new(200, 0, 200, 255), new(100, 0, 100, 255)}; break;
-			case "Black and White": PC = new Color32[]{ new(225, 225, 225, 255), new(5, 5, 5, 255)}; break;
-			case "Royal": PC = new Color32[]{ new(0, 75, 255, 255), new(255, 255, 0, 255)}; break;
-	        case "Aggressive": PC = new Color32[]{ new(200, 0, 0, 255), new(5, 5, 5, 255)}; break;
-    	    case "Desert": PC = new Color32[]{ new(255, 240, 220, 255), new(155, 115, 85, 255)}; break;
-        	case "Rich": PC = new Color32[]{ new(255, 255, 255, 255), new(255, 190, 0, 255)}; break;
-        }
-		PlaneColor1 = PC[0];
-		PlaneColor2 = PC[1];
-
-        if (AirplaneClass == "Striker")MaxHeat *= 2;
-        if (Addition == "Ammo Pack") MaxHeat *= 3;
+        if (AirplaneClass == 2)MaxHeat *= 2;
+        if (Addition.Names[0] == "Ammo Pack") MaxHeat *= 3;
 
 		Health = MaxHealth;
 		Fuel = MaxFuel;
@@ -927,7 +857,7 @@ public class PlayerScript : MonoBehaviour {
     void OnTriggerEnter(Collider Col) {
 
         if (Col.tag == "Terrain" || Col.name == "Home") {
-            if (Addition == "Damper") {
+            if (Addition.Names[0] == "Damper") {
                 Hurt(0f, 2, 4);
             } else {
                 Hurt(Random.Range(25f, 50f), 2, 4);
@@ -950,7 +880,7 @@ public class PlayerScript : MonoBehaviour {
 			}
 		} else if(Col.transform.parent != null){
 			if(Col.transform.parent.name == "VesselModels"){
-				if (Addition == "Damper") {
+				if (Addition.Names[0] == "Damper") {
 					Col.transform.parent.parent.GetComponent<EnemyVesselScript>().Health -= 20f;
 				} else {
 					Col.transform.parent.parent.GetComponent<EnemyVesselScript>().Health -= 10f;

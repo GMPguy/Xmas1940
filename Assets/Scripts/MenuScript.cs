@@ -1,12 +1,17 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using Unity.Services.Analytics;
+using UnityEditor.PackageManager;
 using UnityEngine;
 using UnityEngine.UI;
+using Random=UnityEngine.Random;
 
 public class MenuScript : MonoBehaviour {
 
 	//References
 	public GameScript GS;
+	public ItemClasses IC;
 	public GameObject Windows;
 	public GameObject AnchorUp;
 	public GameObject AnchorDown;
@@ -67,9 +72,7 @@ public class MenuScript : MonoBehaviour {
     public Text CCPText;
 	public Text CurrentCustomizationOptionText;
 	public GameObject CustomizationButtons;
-	public GameObject CustomizationButtons2;
-	public GameObject CC2Prev;
-	public GameObject CC2Next;
+	public ButtonScript[] pnButtons;
 	public int WhichPage = 1;
 	public GameObject CustomizationInfo;
 	public string currentCustomizationOption = "";
@@ -77,12 +80,19 @@ public class MenuScript : MonoBehaviour {
 	public Text OptionInfoDescription;
 
 	public GameObject PlaneinCustomization;
-	public string PCPlaneModel = "";
+	public ItemClasses.PlaneModel PCPlaneModel;
 	public float PCPlaneModelDTN = 0f;
-	public string PCEngineModel = "";
+	public ItemClasses.Engine PCEngineModel;
 	public float PCEngineModelDTN = 0f;
-	public string PCPaint = "";
+	public ItemClasses.Paint PCPaint;
 	public float PCPaintDTN = 0f;
+	public ItemClasses.Special PCAddition;
+	public float PCAditionDTN = 0f;
+
+	public string OriginString = "";
+	public ItemClasses.Item[] OriginArray;
+
+	public AudioSource[] CustomizationSounds; // Buy, equip
     // Campaign Customization
     // Campaign Message
     public Text MessageText;
@@ -137,6 +147,7 @@ public class MenuScript : MonoBehaviour {
 		SetPos = new Vector3(0f, -3.5f, 0f);
 
 		GS = GameObject.Find("GameScript").GetComponent<GameScript>();
+		IC = GS.GetComponent<ItemClasses>();
 
 		LoadingTip = Random.Range (1, 7);
 		Loading = Random.Range (1f, 3f);
@@ -562,84 +573,35 @@ public class MenuScript : MonoBehaviour {
 			MainCamera.transform.position = GameObject.Find ("CampaignCamera").transform.position + GameObject.Find ("CampaignCamera").transform.forward * 10f + Vector3.up * 5f;
 			MainCamera.transform.LookAt (GameObject.Find ("CampaignCamera").transform.position + (Vector3.up * 2f));
 
-			PCPlaneModel = GS.CurrentPlaneModel;
-
-			PCEngineModel = GS.CurrentEngineModel;
-
-			PCPaint = GS.CurrentPaint;
+			if (PCPlaneModelDTN > 0f) PCPlaneModelDTN -= Time.unscaledDeltaTime;
+			else PCPlaneModel = IC.PlaneModels[GS.CurrentPlaneModel];
+			if (PCEngineModelDTN > 0f) PCEngineModelDTN -= Time.unscaledDeltaTime;
+			else PCEngineModel = IC.EngineModels[GS.CurrentEngineModel];
+			if (PCPaintDTN > 0f) PCPaintDTN -= Time.unscaledDeltaTime;
+			else PCPaint = IC.Paints[GS.CurrentPaint];
+			if (PCAditionDTN > 0f) PCAditionDTN -= Time.unscaledDeltaTime;
+			else PCAddition = IC.Additions[GS.CurrentAddition];
 
 			foreach(Transform SelectedPlane in PlaneinCustomization.transform){
-				if(SelectedPlane.name == PCPlaneModel){
+				if(SelectedPlane.name == PCPlaneModel.Names[0]){
 					SelectedPlane.gameObject.SetActive(true);
 					foreach(Transform Part in SelectedPlane){
-						if (Part.name == PCEngineModel || Part.name == PCPlaneModel || (Part.name == "Turret" && GS.CurrentAddition == "Turret")) {
+						if (Part.name == PCEngineModel.Names[0] || Part.name == PCPlaneModel.Names[0] || (Part.name == "Turret" && PCAddition.Names[0] == "Turret")) {
 							Part.gameObject.SetActive (true);
-                            if (Part.name == PCPlaneModel || Part.name == PCEngineModel) {
+                            if (Part.name == PCPlaneModel.Names[0] || Part.name == PCEngineModel.Names[0]) {
                                 foreach (Material PlaneMat in Part.GetComponent<MeshRenderer>().materials) {
                                     if (PlaneMat.name == "PlaneColor1 (Instance)") {
-										switch(PCPaint){
-                                            case "Basic Paint": PlaneMat.color = new Color32(200, 200, 200, 255); break;
-                                            case "Present Colors": PlaneMat.color = new Color32(0, 125, 0, 255); break;
-                                            case "Monochrome": PlaneMat.color = new Color32(100, 100, 100, 255); break;
-                                            case "Night": PlaneMat.color = new Color32(0, 100, 200, 255); break;
-                                            case "War Paint": PlaneMat.color = new Color32(100, 175, 0, 255); break;
-                                            case "Toy Paint": PlaneMat.color = new Color32(0, 100, 200, 255); break;
-                                            case "Girly": PlaneMat.color = new Color32(200, 0, 200, 255); break;
-                                            case "Black and White": PlaneMat.color = new Color32(225, 225, 225, 255); break;
-                                            case "Royal": PlaneMat.color = new Color32(0, 75, 255, 255); break;
-                                            case "Aggressive": PlaneMat.color = new Color32(200, 0, 0, 255); break;
-                                            case "Desert": PlaneMat.color = new Color32(255, 240, 220, 255); break;
-                                            case "Rich": PlaneMat.color = new Color32(255, 255, 255, 255); break;
-										}
+										PlaneMat.color = PCPaint.Paints[0];
                                     } else if (PlaneMat.name == "PlaneColor2 (Instance)") {
-										switch(PCPaint){
-                                            case "Basic Paint": PlaneMat.color = new Color32(200, 100, 100, 255); break;
-                                            case "Present Colors": PlaneMat.color = new Color32(200, 0, 0, 255); break;
-                                            case "Monochrome": PlaneMat.color = new Color32(55, 55, 55, 255); break;
-                                            case "Night": PlaneMat.color = new Color32(5, 5, 55, 255); break;
-                                            case "War Paint": PlaneMat.color = new Color32(55, 75, 55, 255); break;
-                                            case "Toy Paint": PlaneMat.color = new Color32(200, 0, 0, 255); break;
-                                            case "Girly": PlaneMat.color = new Color32(100, 0, 100, 255); break;
-                                            case "Black and White": PlaneMat.color = new Color32(5, 5, 5, 255); break;
-                                            case "Royal": PlaneMat.color = new Color32(255, 255, 0, 255); break;
-                                            case "Aggressive": PlaneMat.color = new Color32(5, 5, 5, 255); break;
-                                            case "Desert": PlaneMat.color = new Color32(155, 115, 85, 255); break;
-                                            case "Rich": PlaneMat.color = new Color32(255, 190, 0, 255); break;
-                                        }
+										PlaneMat.color = PCPaint.Paints[1];
                                     }
                                 }
                             } else if (Part.name == "Turret") {
                                 foreach (Material PlaneMat in Part.transform.GetChild(1).gameObject.GetComponent<MeshRenderer>().materials){
                                     if (PlaneMat.name == "PlaneColor1 (Instance)") {
-										switch(PCPaint){
-                                            case "Basic Paint": PlaneMat.color = new Color32(200, 200, 200, 255); break;
-                                            case "Present Colors": PlaneMat.color = new Color32(0, 125, 0, 255); break;
-                                            case "Monochrome": PlaneMat.color = new Color32(100, 100, 100, 255); break;
-                                            case "Night": PlaneMat.color = new Color32(0, 100, 200, 255); break;
-                                            case "War Paint": PlaneMat.color = new Color32(100, 175, 0, 255); break;
-                                            case "Toy Paint": PlaneMat.color = new Color32(0, 100, 200, 255); break;
-                                            case "Girly": PlaneMat.color = new Color32(200, 0, 200, 255); break;
-                                            case "Black and White": PlaneMat.color = new Color32(225, 225, 225, 255); break;
-                                            case "Royal": PlaneMat.color = new Color32(0, 75, 255, 255); break;
-                                            case "Aggressive": PlaneMat.color = new Color32(200, 0, 0, 255); break;
-                                            case "Desert": PlaneMat.color = new Color32(255, 240, 220, 255); break;
-                                            case "Rich": PlaneMat.color = new Color32(255, 255, 255, 255); break;
-										}
+										PlaneMat.color = PCPaint.Paints[0];
                                     } else if (PlaneMat.name == "PlaneColor2 (Instance)") {
-										switch(PCPaint){
-                                            case "Basic Paint": PlaneMat.color = new Color32(200, 100, 100, 255); break;
-                                            case "Present Colors": PlaneMat.color = new Color32(200, 0, 0, 255); break;
-                                            case "Monochrome": PlaneMat.color = new Color32(55, 55, 55, 255); break;
-                                            case "Night": PlaneMat.color = new Color32(5, 5, 55, 255); break;
-                                            case "War Paint": PlaneMat.color = new Color32(55, 75, 55, 255); break;
-                                            case "Toy Paint": PlaneMat.color = new Color32(200, 0, 0, 255); break;
-                                            case "Girly": PlaneMat.color = new Color32(100, 0, 100, 255); break;
-                                            case "Black and White": PlaneMat.color = new Color32(5, 5, 5, 255); break;
-                                            case "Royal": PlaneMat.color = new Color32(255, 255, 0, 255); break;
-                                            case "Aggressive": PlaneMat.color = new Color32(5, 5, 5, 255); break;
-                                            case "Desert": PlaneMat.color = new Color32(155, 115, 85, 255); break;
-                                            case "Rich": PlaneMat.color = new Color32(255, 190, 0, 255); break;
-                                        }
+										PlaneMat.color = PCPaint.Paints[1];
                                     }
                                 }
                             }
@@ -721,119 +683,188 @@ public class MenuScript : MonoBehaviour {
 
     }
 
+	string getOrigin(string Category, int What = -1, string setCategory = ""){
+		if(What == -1) { // Receive to origin
+			switch(Category){
+				case "Plane Model": return GS.OwnedPlaneModels;
+				case "Engine Model": return GS.OwnedEngineModels;
+				case "Gun Type": return GS.OwnedGundTypes;
+				case "Present Cannon Type": return GS.OwnedPresentCannonTypes;
+				case "Special Type": return GS.OwnedSpecialTypes;
+				case "Addition": return GS.OwnedAdditions;
+				case "Paint": return GS.OwnedPaints;
+				default:
+					Debug.LogError("No return value for " + Category + " - " + What);
+					return "";
+			}
+		} else if (What == -2) { // Set to origin
+			switch(Category){
+				case "Plane Model": GS.OwnedPlaneModels = setCategory; break;
+				case "Engine Model": GS.OwnedEngineModels = setCategory; break;
+				case "Gun Type": GS.OwnedGundTypes = setCategory; break;
+				case "Present Cannon Type": GS.OwnedPresentCannonTypes = setCategory; break;
+				case "Special Type": GS.OwnedSpecialTypes = setCategory; break;
+				case "Addition": GS.OwnedAdditions = setCategory; break;
+				case "Paint": GS.OwnedPaints = setCategory; break;
+				default: Debug.LogError("No return value for " + Category + " - " + What); break;
+			}
+			return "";
+		} else {
+			switch(Category){
+				case "Plane Model": 
+					if(setCategory == "Equip") GS.CurrentPlaneModel = What; 
+					else if (setCategory == "Receive") return GS.CurrentPlaneModel.ToString(); break;
+				case "Engine Model": 
+					if(setCategory == "Equip") GS.CurrentEngineModel = What;
+					else if (setCategory == "Receive") return GS.CurrentEngineModel.ToString(); break;
+				case "Gun Type": 
+					if(setCategory == "Equip") GS.CurrentGunType = What;
+					else if (setCategory == "Receive") return GS.CurrentGunType.ToString(); break;
+				case "Present Cannon Type": 
+					if(setCategory == "Equip") GS.CurrentPresentCannonType = What;
+					else if (setCategory == "Receive") return GS.CurrentPresentCannonType.ToString(); break;
+				case "Special Type": 
+					if(setCategory == "Equip") GS.CurrentSpecialType = What;
+					else if (setCategory == "Receive") return GS.CurrentSpecialType.ToString(); break;
+				case "Addition": 
+					if(setCategory == "Equip") GS.CurrentAddition = What;
+					else if (setCategory == "Receive") return GS.CurrentAddition.ToString(); break;
+				case "Paint": 
+					if(setCategory == "Equip") GS.CurrentPaint = What;
+					else if (setCategory == "Receive") return GS.CurrentPaint.ToString(); break;
+				default: Debug.LogError("No return value for " + Category + " - " + What); break;
+			}
+			return "";
+		}
+	}
+
+	string Replace(string sauce, int Index){
+		sauce = sauce.Remove(Index, 1); sauce = sauce.Insert(Index, "1"); return sauce;
+	}
+
 	void CampaignCustomization(){
 
 		if (currentCustomizationOption == "") {
-			WhichPage = 1;
+			WhichPage = 0;
 			CurrentCustomizationOptionText.text = GS.SetText ("", "");
 			OptionInfoName.text = "";
 			OptionInfoDescription.text = "";
-			CustomizationButtons.SetActive (true);
-			CustomizationButtons2.SetActive (false);
-			foreach (Transform Button in CustomizationButtons.transform.GetChild(0)) {
+			pnButtons[0].transform.parent.localScale = Vector3.zero;
+			foreach (Transform Button in CustomizationButtons.transform) {
+				string[] ChooseApropiate = new string[]{"", ""};
+				Button.GetComponent<ButtonScript>().IsActive = true;
 				if (Button.gameObject.name == "1") {
-					Button.gameObject.GetComponent<Text> ().text = GS.SetText ("Plane Model:\n" + GS.CurrentPlaneModel, "Model Samolotu:\n" + GS.CurrentPlaneModel);
-					if (Button.gameObject.GetComponent<ButtonScript> ().IsSelected && Input.GetMouseButtonDown (0)) {
-						currentCustomizationOption = "Plane Model";
-						Button.gameObject.GetComponent<ButtonScript> ().IsSelected = false;
-						Click.Play ();
-					}
+					ChooseApropiate[0] = GS.SetText ("Plane Model:\n" + IC.PlaneModels[GS.CurrentPlaneModel].Names[0], "Model Samolotu:\n" + IC.PlaneModels[GS.CurrentPlaneModel].Names[1]);
+					ChooseApropiate[1] =  "Plane Model";
 				} else if (Button.gameObject.name == "2") {
-					Button.gameObject.GetComponent<Text> ().text = GS.SetText ("Engine Model:\n" + GS.CurrentEngineModel, "Model Silnika:\n" + GS.CurrentEngineModel);
-					if (Button.gameObject.GetComponent<ButtonScript> ().IsSelected && Input.GetMouseButtonDown (0)) {
-						currentCustomizationOption = "Engine Model";
-						Button.gameObject.GetComponent<ButtonScript> ().IsSelected = false;
-						Click.Play ();
-					}
+					ChooseApropiate[0] = GS.SetText ("Engine Model:\n" + IC.EngineModels[GS.CurrentEngineModel].Names[0], "Model Silnika:\n" + IC.EngineModels[GS.CurrentEngineModel].Names[1]);
+					ChooseApropiate[1] =  "Engine Model";
 				} else if (Button.gameObject.name == "3") {
-					Button.gameObject.GetComponent<Text> ().text = GS.SetText ("Gun Type:\n" + GS.CurrentGunType, "Typ Broni:\n" + GS.CurrentGunType);
-					if (Button.gameObject.GetComponent<ButtonScript> ().IsSelected && Input.GetMouseButtonDown (0)) {
-						currentCustomizationOption = "Gun Type";
-						Button.gameObject.GetComponent<ButtonScript> ().IsSelected = false;
-						Click.Play ();
-					}
+					ChooseApropiate[0] = GS.SetText ("Gun Type:\n" + IC.Guns[GS.CurrentGunType].Names[0], "Typ Broni:\n" + IC.Guns[GS.CurrentGunType].Names[1]);
+					ChooseApropiate[1] =  "Gun Type";
 				} else if (Button.gameObject.name == "4") {
-					Button.gameObject.GetComponent<Text> ().text = GS.SetText ("Present Cannon Type:\n" + GS.CurrentPresentCannonType, "Typ Wyrzutni Prezentów:\n" + GS.CurrentPresentCannonType);
-					if (Button.gameObject.GetComponent<ButtonScript> ().IsSelected && Input.GetMouseButtonDown (0)) {
-						currentCustomizationOption = "Present Cannon Type";
-						Button.gameObject.GetComponent<ButtonScript> ().IsSelected = false;
-						Click.Play ();
-					}
+					ChooseApropiate[0] = GS.SetText ("Present Cannon Type:\n" + IC.Presents[GS.CurrentPresentCannonType].Names[0], "Typ Wyrzutni Prezentów:\n" + IC.Presents[GS.CurrentPresentCannonType].Names[1]);
+					ChooseApropiate[1] =  "Present Cannon Type";
 				} else if (Button.gameObject.name == "5") {
-					Button.gameObject.GetComponent<Text> ().text = GS.SetText ("Special Type:\n" + GS.CurrentSpecialType, "Typ Ekwipunku Specjalnego:\n" + GS.CurrentSpecialType);
-					if (Button.gameObject.GetComponent<ButtonScript> ().IsSelected && Input.GetMouseButtonDown (0)) {
-						currentCustomizationOption = "Special Type";
-						Button.gameObject.GetComponent<ButtonScript> ().IsSelected = false;
-						Click.Play ();
-					}
+					ChooseApropiate[0] = GS.SetText ("Special Type:\n" + IC.Specials[GS.CurrentSpecialType].Names[0], "Typ Ekwipunku Specjalnego:\n" + IC.Specials[GS.CurrentSpecialType].Names[1]);
+					ChooseApropiate[1] =  "Special Type";
 				} else if (Button.gameObject.name == "6") {
-					Button.gameObject.GetComponent<Text> ().text = GS.SetText ("Addition:\n" + GS.CurrentAddition, "Dodatek:\n" + GS.CurrentAddition);
-					if (Button.gameObject.GetComponent<ButtonScript> ().IsSelected && Input.GetMouseButtonDown (0)) {
-						currentCustomizationOption = "Addition";
-						Button.gameObject.GetComponent<ButtonScript> ().IsSelected = false;
-						Click.Play ();
-					}
+					ChooseApropiate[0] = GS.SetText ("Addition:\n" + IC.Additions[GS.CurrentAddition].Names[0], "Dodatek:\n" + IC.Additions[GS.CurrentAddition].Names[1]);
+					ChooseApropiate[1] =  "Addition";
 				} else if (Button.gameObject.name == "7") {
-					Button.gameObject.GetComponent<Text> ().text = GS.SetText ("Paint:\n" + GS.CurrentPaint, "Farba:\n" + GS.CurrentPaint);
-					if (Button.gameObject.GetComponent<ButtonScript> ().IsSelected && Input.GetMouseButtonDown (0)) {
-						currentCustomizationOption = "Paint";
-						Button.gameObject.GetComponent<ButtonScript> ().IsSelected = false;
-						Click.Play ();
-					}
+					ChooseApropiate[0] = GS.SetText ("Paint:\n" + IC.Paints[GS.CurrentPaint].Names[0], "Farba:\n" + IC.Paints[GS.CurrentPaint].Names[1]);
+					ChooseApropiate[1] = "Paint";
 				}
-			}
-		} else {
-			CustomizationButtons.SetActive (false);
-			CustomizationButtons2.SetActive (true);
-			bool CanNext = false;
-			bool CanPrev = false;
-			foreach(Transform Window in CustomizationButtons2.transform){
-				if (Window.name == currentCustomizationOption + WhichPage || Window.name == "PreviousPage" || Window.name == "NextPage") {
-					Window.gameObject.SetActive (true);
-				} else {
-					if(Window.name == currentCustomizationOption + (WhichPage + 1)){
-						CanNext = true;
-					} else if(Window.name == currentCustomizationOption + (WhichPage - 1)){
-						CanPrev = true;
-					}
-					Window.gameObject.SetActive (false);
-				}
-			}
-			// Change page
-			if (CanNext == true) {
-				CC2Next.GetComponent<Text> ().text = GS.SetText ("Next\n Page", "Następna\n Strona");
-				CC2Next.GetComponent<ButtonScript> ().IsActive = true;
-				if (CC2Next.GetComponent<ButtonScript> ().IsSelected && Input.GetMouseButtonDown (0)) {
-					WhichPage += 1;
-				}
-			} else {
-				CC2Next.GetComponent<Text> ().text = GS.SetText ("", "");
-				CC2Next.GetComponent<ButtonScript> ().IsActive = false;
-			}
-			if (CanPrev == true) {
-				CC2Prev.GetComponent<Text> ().text = GS.SetText ("Previous\n Page", "Poprzednia\n Strona");
-				CC2Prev.GetComponent<ButtonScript> ().IsActive = true;
-				if (CC2Prev.GetComponent<ButtonScript> ().IsSelected && Input.GetMouseButtonDown (0)) {
-					WhichPage -= 1;
-				}
-			} else {
-				CC2Prev.GetComponent<Text> ().text = GS.SetText ("", "");
-				CC2Prev.GetComponent<ButtonScript> ().IsActive = false;
-			}
-			// Change page
 
-			// Set textes
-			string[] CCOT = new string[]{"", ""};
-			switch(currentCustomizationOption){
-				case "Plane Model": CCOT = new string[]{ "Plane Model", "Model Samolotu" }; break;
-				case "Engine Model": CCOT = new string[]{ "Engine Model", "Model Silnika" }; break;
-				case "Gun Type": CCOT = new string[]{ "Gun Type", "Typ Broni" }; break;
-				case "Present Cannon Type": CCOT = new string[]{ "Present Cannon Type", "Typ Wyrzutni Prezentów" }; break;
-				case "Special Type": CCOT = new string[]{ "Special Type", "Typ Ekwipunku Specjalnego" }; break;
-				case "Addition": CCOT = new string[]{ "Addition", "Dodatek" }; break;
-				case "Paint": CCOT = new string[]{ "Paint", "Farba" }; break;
+				Button.gameObject.GetComponent<Text> ().text = ChooseApropiate[0];
+				if (Button.gameObject.GetComponent<ButtonScript> ().IsSelected && Input.GetMouseButtonDown (0)) {
+					currentCustomizationOption = ChooseApropiate[1];
+					Button.gameObject.GetComponent<ButtonScript> ().IsSelected = false;
+					Click.Play ();
+					OriginString = getOrigin(currentCustomizationOption);
+					switch(currentCustomizationOption){
+						case "Plane Model": OriginArray = IC.PlaneModels; break;
+						case "Engine Model": OriginArray = IC.EngineModels; break;
+						case "Gun Type": OriginArray = IC.Guns; break;
+						case "Present Cannon Type": OriginArray = IC.Presents; break;
+						case "Special Type": OriginArray = IC.Specials; break;
+						case "Addition": OriginArray = IC.Additions; break;
+						case "Paint": OriginArray = IC.Paints; break;
+					}
+				}
 			}
-			// Set textes
+		} else {		
+
+			pnButtons[0].transform.parent.localScale = Vector3.one;
+			for(int sb = 0; sb < 7; sb++){
+				int Index = sb + WhichPage*7;
+				ButtonScript currButt = CustomizationButtons.transform.GetChild(sb).GetComponent<ButtonScript>();
+				Text currText = currButt.GetComponent<Text>();
+
+				if(Index < OriginArray.Length){
+
+					currButt.IsActive = true;
+					char OwnStatus = OriginString[Index];
+
+					switch(OwnStatus){
+						case '0': currText.text = GS.SetText(OriginArray[Index].Names[0], OriginArray[Index].Names[1]) + "\n" + OriginArray[Index].Price; break;
+						case '1':
+							if (getOrigin(currentCustomizationOption, Index, "Receive") == Index.ToString()) currText.text = GS.SetText(OriginArray[Index].Names[0], OriginArray[Index].Names[1]) + GS.SetText("\nEQUIPED", "\nZAMONTOWANE");
+							else currText.text = GS.SetText(OriginArray[Index].Names[0], OriginArray[Index].Names[1]) + GS.SetText("\nOwned", "\nPosiadasz"); break;
+					}
+
+					if(currButt.IsSelected){
+						EraseOptionInfo = 1f;
+						OptionInfoName.text = GS.SetText(OriginArray[Index].Names[0], OriginArray[Index].Names[1]);
+						OptionInfoDescription.text = GS.SetText(OriginArray[Index].Desc[0], OriginArray[Index].Desc[1]);
+
+						if(Input.GetMouseButtonDown(0)){
+							if(OwnStatus == '0' && GS.Mooney >= OriginArray[Index].Price){
+								OriginString = Replace(OriginString, Index);
+								getOrigin(currentCustomizationOption, -2, OriginString);
+								GS.Mooney -= OriginArray[Index].Price;
+								getOrigin(currentCustomizationOption, Index, "Equip");
+								CustomizationSounds[0].Play();
+							} else if (OwnStatus == '1'){
+								getOrigin(currentCustomizationOption, Index, "Equip");
+								CustomizationSounds[1].Play();
+							}
+						}
+
+						switch(currentCustomizationOption){
+							case "Plane Model": PCPlaneModelDTN = 0.3f; PCPlaneModel = IC.PlaneModels[Index]; break;
+							case "Engine Model": PCEngineModelDTN = 0.3f; PCEngineModel = IC.EngineModels[Index]; break;
+							case "Addition": PCAditionDTN = 0.3f; PCAddition = IC.Additions[Index]; break;
+							case "Paint": PCPaintDTN = 0.3f; PCPaint = IC.Paints[Index]; break;
+						}
+					}
+
+					if(WhichPage > 0) {
+						pnButtons[0].GetComponent<Text>().text = "<---";
+						pnButtons[0].IsActive = true;
+						if(pnButtons[0].IsSelected && Input.GetMouseButtonDown(0)) WhichPage -= 1;
+					} else {
+						pnButtons[0].GetComponent<Text>().text = "";
+						pnButtons[0].IsActive = false;
+					}
+
+					if(sb==6 && Index < OriginArray.Length-1) {
+						pnButtons[1].GetComponent<Text>().text = "--->";
+						pnButtons[1].IsActive = true;
+						if(pnButtons[1].IsSelected && Input.GetMouseButtonDown(0)) WhichPage += 1;
+					} else {
+						pnButtons[1].GetComponent<Text>().text = "";
+						pnButtons[1].IsActive = false;
+					}
+
+				} else {
+
+					currButt.IsActive = false;
+					currText.text = "";
+
+				}
+
+			}
 
 		}
 

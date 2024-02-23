@@ -5,11 +5,13 @@ using UnityEngine;
 
 public class ProjectileScript : MonoBehaviour {
 
-	public string TypeofGun = "";
+	public string TypeofGun;
+	public int ICtype = 0; // 0 data from ItemClass.Gun - 1 data from ItemClass.Present - 2 custom data
 	public GameObject WhoShot;
 	public Transform GunFirePos;
 	Vector3 StartPos;
 	GameScript GS;
+	ItemClasses IC;
 	public GameObject PreviousPos;
 	float Damage = 1f;
 	float Speed = 1f;
@@ -39,6 +41,7 @@ public class ProjectileScript : MonoBehaviour {
     void Start () {
 
 		GS = GameObject.Find("GameScript").GetComponent<GameScript>();
+		IC = GS.GetComponent<ItemClasses>();
 
 		PreviousPos.transform.parent = null;
 		PreviousPos.transform.position = this.transform.position - (this.transform.forward * 1f);
@@ -55,78 +58,89 @@ public class ProjectileScript : MonoBehaviour {
 		case "Vickers":
 			ChostBullet = Bullet; GunFireSound = "Vickers";
 			Bmain.startColor = new Color(1f, 0.5f, 0f, 0.05f);
-			BulletVars = new float[]{Random.Range(5f, 20f), 750f, 400f, 1f};
+			ICtype = 0;
 			break;
 		case "M2 Browning":
 			ChostBullet = Bullet; GunFireSound = "M2 Browning";
 			Bmain.startColor = new Color(1f, 0.75f, 0.5f, 0.1f);
-			BulletVars = new float[]{Random.Range(15f, 20f), 1000f, 600f, 0.25f};
+			ICtype = 0;
 			break;
 		case "M3 Browning":
 			ChostBullet = Bullet; GunFireSound = "M2 Browning";
 			Bmain.startColor = new Color(1f, 0.75f, 0.5f, 0.05f);
-			BulletVars = new float[]{Random.Range(20f, 50f), 1000f, 800f, 0.25f};
+			ICtype = 0;
 			break;
 		case "Cannon":
 			ChostBullet = Bullet; GunFireSound = "Cannon";
 			Bmain.startColor = new Color(1f, 0f, 0f, 0.05f);
-			BulletVars = new float[]{Random.Range(50f, 100f), 500f, 300f, 0f};
+			ICtype = 0;
 			break;
 		case "Flammable":
 			ChostBullet = Bullet; GunFireSound = "Flammable";
 			Bmain.startColor = new Color(1f, 0.5f, 0f, 0.1f);
-			BulletVars = new float[]{Random.Range(5f, 15f), 750f, 400f, 1f};
+			ICtype = 0;
 			break;
 		case "Mugger Missiles":
 			ChostBullet = Bullet; GunFireSound = "Flammable";
 			Bmain.startColor = new Color(0.5f, 1f, 0f, 0.1f);
-			BulletVars = new float[]{Random.Range(5f, 15f), 750f, 400f, 1f};
+			ICtype = 0;
 			break;
 		case "Flak":
 			ChostBullet = Bullet; GunFireSound = "Flak";
 			Bmain.startColor = new Color(1f, 0.75f, 0.5f, 0.05f);
-			BulletVars = new float[]{Random.Range(100f, 200f), 1000f, Random.Range(500f, 750f), 3f};
+			ICtype = 0;
 			break;
 		case "Jet Gun":
 			ChostBullet = Bullet; GunFireSound = "JetGun";
 			Bmain.startColor = new Color(1f, 0.75f, 0.5f, 0.05f);
-			BulletVars = new float[]{Random.Range(20f, 50f), 2000f, 1000f, 0.25f};
+			ICtype = 0;
 			break;
         case "Paintball":
 			ChostBullet = Paintball; GunFireSound = "Paintball"; Smoke = false;
-			BulletVars = new float[]{Random.Range(5f,15f), 500f, 600f, 1f};
+			ICtype = 0;
 			break;
         case "Rocket":
 			ChostBullet = Rocket; GunFireSound = "MissileLaunch";
-			BulletVars = new float[]{Random.Range(50f, 100f), 500f, 600f, 0f};
+			ICtype = 0;
 			break;
         case "Laser":
             ChostBullet = Laser; GunFireSound = "Laser"; Smoke = false;
 			Lmain.startColor = new Color(1f, 0.05f, 0.05f, 1f);
-			BulletVars = new float[]{Random.Range(5f, 20f), PreviusSpeed, 500f, 0f};
+			ICtype = 0;
 			break;
         case "Blue Laser":
             ChostBullet = Laser; GunFireSound = "Laser"; Smoke = false;
 			Lmain.startColor = new Color(0f, 0.1f, 1f, 1f);
-			BulletVars = new float[]{Random.Range(15f, 20f), PreviusSpeed, 1000f, 0f};
+			ICtype = 0;
 			break;
-        case "Present":
+        case "Slingshot": case "Present Cannon": case "Sniper Rifle":
 			ChostBullet = Present; GunFireSound = "PresentCannon";
-			BulletVars = new float[]{0f, 200f, PresentRange, 0f};
+			ICtype = 1;
 			break;
 		case "Homing Missile":
 			ChostBullet = HomingMissile; GunFireSound = "MissileLaunch";
 			BulletVars = new float[]{Random.Range(50f, 100f), PreviusSpeed, 1000f, 0f};
+			ICtype = 2;
 			break;
         case "Brick":
 			ChostBullet = Brick; GunFireSound = "Cannon";
 			BulletVars = new float[]{1000f, PreviusSpeed*2f, 5000f, 0f};
+			ICtype = 2;
 			break;
         }
 
-		Damage = BulletVars[0];
-		Speed = BulletVars[1];
-		Range = BulletVars[2];
+		switch(ICtype){
+			case 0:
+				ItemClasses.Gun rGun = IC.ReceiveGunType(TypeofGun);
+				BulletVars = new float[]{Random.Range(rGun.Damage[0], rGun.Damage[1]), rGun.Speed, Random.Range(rGun.Range[0], rGun.Range[1]), rGun.Spread};
+				break;
+			case 1:
+				ItemClasses.Present rPresent = IC.ReceivePresentType(TypeofGun);
+				BulletVars = new float[]{0f, rPresent.Speed, rPresent.Range, 0f};
+				break;
+		}
+
+		Damage = BulletVars[0]; Speed = BulletVars[1]; Range = BulletVars[2];
 		this.transform.Rotate(new Vector3(Random.Range(-BulletVars[3], BulletVars[3]), Random.Range(-BulletVars[3], BulletVars[3]), 0f));
 
 		ChostBullet.gameObject.SetActive (true);
@@ -168,7 +182,7 @@ public class ProjectileScript : MonoBehaviour {
 
 		if(Vector3.Distance(this.transform.position, StartPos) > Range && Hit == false && TypeofGun != "Laser" && TypeofGun != "Blue Laser"){
 			Hit = true;
-			if(TypeofGun == "Present") GS.statModify("Presents missed", 1);
+			if(ICtype == 1) GS.statModify("Presents missed", 1);
 			if(TypeofGun == "Flak" || TypeofGun == "Homing Missile"){
 				GameObject Boom = Instantiate (Special) as GameObject;
 				Boom.GetComponent<SpecialScript> ().TypeofSpecial = "Explosion";
@@ -211,7 +225,7 @@ public class ProjectileScript : MonoBehaviour {
         // Raycast Detection
 
         // Projectiles special
-        if (TypeofGun == "Present") {
+        if (ICtype == 1) {
             foreach (Material Mat in Present.GetComponent<MeshRenderer>().materials) {
                 if (Mat.name == "Material1 (Instance)") {
                     Mat.color = PresentColor1;
@@ -273,7 +287,7 @@ public class ProjectileScript : MonoBehaviour {
                     Destroy(this.gameObject);
                 }
 				break;
-            case "Brick": case "Present":
+            case "Brick": case "Slingshot": case "Present Cannon": case "Sniper Rifle":
                 Destroy(this.gameObject);
 				break;
 			case "Homing Missile":
@@ -344,7 +358,7 @@ public class ProjectileScript : MonoBehaviour {
 			}
 
 			if(Col.name == "Home"){
-				if(TypeofGun == "Present"){
+				if(ICtype == 1){
 					Hit = true;
 					Col.transform.parent.GetComponent<HomeScript> ().PresentGot ();
 					pDelivered = true;
@@ -356,7 +370,7 @@ public class ProjectileScript : MonoBehaviour {
 					Efect.transform.position = new Vector3 (HitPoint.x, 0f, HitPoint.z);
 					Hit = true;
 				} else if (Col.transform.parent.parent != null) {
-					if (Col.transform.parent.parent.name == "PlaneModels" && TypeofGun != "Present") {
+					if (Col.transform.parent.parent.name == "PlaneModels" && ICtype != 1) {
 						if (Col.transform.parent.parent.parent.gameObject != WhoShot) {
 							GameObject Efect = Instantiate (Effect) as GameObject;
 							Efect.GetComponent<EffectScript> ().TypeofEffect = "BullethitPlane";
@@ -365,7 +379,7 @@ public class ProjectileScript : MonoBehaviour {
 							Hit = true;
 							if(Col.transform.parent.parent.gameObject.tag == "Foe") Col.transform.parent.parent.GetComponent<EnemyVesselScript>().Scarred = true;
 						}
-					} else if (Col.transform.parent.parent.GetComponent<EnemyVesselScript>() != null && FiredByEnemy != true && TypeofGun != "Present") {
+					} else if (Col.transform.parent.parent.GetComponent<EnemyVesselScript>() != null && FiredByEnemy != true && ICtype != 1) {
 						if (Col.transform.parent.parent.gameObject != WhoShot) {
 							sHit = true;
 							GameObject Efect = Instantiate (Effect) as GameObject;
@@ -397,7 +411,7 @@ public class ProjectileScript : MonoBehaviour {
 				ParticleSystem.MainModule EC = Efect.GetComponent<EffectScript>().PaintballHit.GetComponent<ParticleSystem>().main;
                 EC.startColor = new Color(PresentColor1.r, PresentColor1.g, PresentColor1.b, 0.25f);
                 Efect.transform.position = HitPoint;
-            } else if (TypeofGun == "Present"){
+            } else if (ICtype == 1){
 				if(pDelivered) GS.statModify("Presents delivered", 1);
 				else {
 					GameObject.Find("MainCanvas").GetComponent<CanvasScript>().Message(GS.SetText("Present missed", "Prezent spudłował"), Color.red, new float[]{3f, 1f});

@@ -40,8 +40,13 @@ public class CanvasScript : MonoBehaviour {
     string[] IntroTextes;
     float IntroTime = 0f;
     // While results
+    float ResultTime = -10f;
+    public Text[] ResultsTitle;
     public Transform ResultsWindow;
+    Image ResultsBG;
     public Text ResultsText;
+    public Text ContinueText;
+    string desiredResText = "";
 	// Flash
 	public Image FlashImg;
 	float[] FlashDisp = {0f, 1f};
@@ -76,6 +81,7 @@ public class CanvasScript : MonoBehaviour {
         player = GameObject.FindGameObjectWithTag("Player").GetComponent<PlayerScript>();
         MainCamera = GameObject.Find("MainCamera").GetComponent<Camera>();
         Flash(Color.black, new float[]{2f, 1f});
+        ResultsBG = ResultsText.transform.parent.GetComponent<Image>();
 
         // Set intro textes
         IntroTextes = new string[] { GS.SetText("Level ", "Poziom ") + GS.Level, GS.SetText("Deliver the presents", "Dostarcz prezenty")};
@@ -181,25 +187,60 @@ public class CanvasScript : MonoBehaviour {
     void Results(string view = ""){
 
         if(view != ""){
-            ResultsWindow.localScale = Vector3.Lerp(ResultsWindow.localScale, Vector3.one, Time.unscaledDeltaTime*10f);
-            if(ResultsWindow.localScale.x > 0.9f){
-                ResultsText.color = new Color(1f,1f,1f,Mathf.MoveTowards(ResultsText.color.a, 1f, Time.unscaledDeltaTime));
+            ResultTime += Time.unscaledDeltaTime/2f;
+            ResultsWindow.localScale = Vector3.one;
+
+            if(desiredResText == ""){
+                desiredResText = GS.statModify("ReturnTemp", 0);
+                if(view == "SuccessDP") {
+                    desiredResText += "\n" + 
+                    GS.SetText("Accuracy bonus: ", "Bonus za celność: ") + (int)RS.accBonus +
+                    GS.SetText("%\nHealth bonus: ", "\nBonus za zdrowie: ") + (int)RS.hpBonus +
+                    GS.SetText("%\nMorality bonus: ", "\nBonus za moralność: ") + (int)RS.morBonus +
+                    GS.SetText("%\n\nScore gained: ", "\n\nUzyskany wynik: ") + RS.TempScore +
+                    GS.SetText("\nPayout: ", "\nWypłata: ") + RS.TempMooney;
+                    ResultsTitle[1].text = GS.SetText("Presents have been delivered", "Prezenty zostały dostarczone");
+                }
+
+                ResultsTitle[0].text = GS.SetText("MISSION COMPLETED", "MISJA WYKONANA");
+                ContinueText.text = GS.SetText("Press any key to continue", "Naciśnij dowolny klawisz by kontynuować");
+            }
+
+            if(ResultTime < 1f){
+                ResultsTitle[1].color = ResultsBG.color = new Color(0f,0f,0f,0f);
+                ResultsTitle[0].color = Color.white;
+                ResultsTitle[0].GetComponent<Outline>().effectDistance = Vector2.Lerp(Vector2.one * -10f, Vector2.zero, ResultTime/1f);
+            } else if(ResultTime < 2f){
+                ResultsTitle[1].color = new Color(1f,1f,1f, Mathf.Lerp(0f, 1f, (ResultTime-1f)/1f));
+            } else if(ResultTime < 2.5f){
+                ResultsTitle[0].GetComponent<RectTransform>().anchorMin = ResultsTitle[0].GetComponent<RectTransform>().anchorMax = Vector2.Lerp(Vector2.one/2f, new Vector2(0.5f, 0.9f), (ResultTime-2f) / 0.5f);
+                ResultsTitle[0].GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
+            } else if (ResultTime < 3f){
+                ResultsBG.color = new Color(0f,0f,0f, Mathf.Lerp(0f, 0.5f, (ResultTime-2.5f)/0.5f));
+            } else if (ResultTime < 5f){
+                ResultsText.text = desiredResText.Substring(0, (int)Mathf.Lerp(0f, desiredResText.Length+0.5f, (ResultTime-3f) / 2f));
+            } else if (ResultTime < 6f) {
+                ResultsTitle[0].color = ResultsTitle[1].color = Color.white;
+                ResultsTitle[0].GetComponent<Outline>().effectDistance = Vector2.zero;
+                ResultsTitle[0].GetComponent<RectTransform>().anchorMin = ResultsTitle[0].GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 0.9f);
+                ResultsTitle[0].GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
+                ResultsBG.color = new Color(0f,0f,0f,0.5f);
+                ResultsText.text = desiredResText;
+                ResultTime = 7f;
             } else {
-                ResultsText.text = GS.statModify("ReturnTemp", 0);
-                if(view == "SuccessDP") ResultsText.text += "\n" + 
-                GS.SetText("Accuracy bonus: ", "Bonus za celność: ") + (int)RS.accBonus +
-                GS.SetText("\nHealth bonus: ", "\nBonus za zdrowie: ") + (int)RS.hpBonus +
-                GS.SetText("\nMorality bonus: ", "\nBonus za moralność: ") + (int)RS.morBonus +
-                GS.SetText("\n\nScore gained: ", "\n\nUzyskany wynik: ") + RS.TempScore +
-                GS.SetText("\nPayout: ", "\nWypłata: ") + RS.TempMooney;
+                ContinueText.color = new Color(1f,1f,1f,Mathf.Abs(Mathf.Cos(Time.timeSinceLevelLoad)));
             }
 
             if(Input.anyKeyDown){
-                RS.State = "Left1";
+                if(ResultTime < 5f) ResultTime = 5f;
+                else RS.State = "Left1";
             }
+
         } else {
             ResultsWindow.localScale = Vector3.zero;
-            ResultsText.color = new Color(1f,1f,1f,0f);
+            ResultsBG.color = new Color(0f, 0f, 0f, 0f);
+            ResultsText.text = "";
+            ResultTime = -10f;
         }
 
     }
@@ -601,7 +642,7 @@ public class CanvasScript : MonoBehaviour {
 		if(ChangeMusic == true){
 			List<GameObject> MusicCandidates = new List<GameObject>();
 			foreach(Transform Music in Musics.transform){
-				if(Music.gameObject != CurrentMusic){
+				if(Music.gameObject != CurrentMusic && Music.name != "Win"){
 					MusicCandidates.Add(Music.gameObject);
 				}
 			}
@@ -611,7 +652,10 @@ public class CanvasScript : MonoBehaviour {
 
 		if(GameObject.Find("MainPlane") == null){
 			foreach(Transform Music in Musics.transform){
-				Music.gameObject.GetComponent<AudioSource> ().Stop ();
+                if(RS.State == "SuccessDP" && ResultTime < 0f && Music.name == "Win" && !Music.GetComponent<AudioSource>().isPlaying) {
+                    Music.gameObject.GetComponent<AudioSource> ().Play ();
+                    ResultTime = 0f;
+                } else if (Music.name != "Win") Music.gameObject.GetComponent<AudioSource> ().Stop ();
 			}
 		}
 

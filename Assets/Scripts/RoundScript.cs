@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using UnityEngine;
 
 public class RoundScript : MonoBehaviour {
@@ -39,14 +40,14 @@ public class RoundScript : MonoBehaviour {
 		// Find Player
 
 		// Set Level
-        SetUp("Endless");
+        SetUp(GS.GameMode);
         // Set Level
 		
 	}
 
-    void SetUp(string How){
+    void SetUp(int How){
         switch(How){
-            case "Endless":
+            case 1: // Endless
                 Level = GS.Level;
                 GameObject.FindObjectOfType<LandScript>().spawnLand("Plains", 20, Random.Range(1f, 999999f), (int)Random.Range(0f, 3.9f));
                 MapSize = (int)Mathf.Lerp(5000f, 15000f, (float)Level/20f);
@@ -89,10 +90,12 @@ public class RoundScript : MonoBehaviour {
                         for (int Spawn = LevelState / 10; Spawn > 0; Spawn--)PlanesToSpawn.Add("Messerschmitt 110");
                         for (int Spawn = LevelState / 20; Spawn > 0; Spawn--)PlanesToSpawn.Add("Messerschmitt Me 262");
                         foreach(string SpawnThePlanes in PlanesToSpawn){
+                            int PickHouse = (int)Random.Range(0f, placedHomes.ToArray().Length-0.1f);
                             GameObject EnemyPlane = Instantiate(Enemy) as GameObject;
                             EnemyPlane.GetComponent<EnemyVesselScript>().TypeofVessel = SpawnThePlanes;
                             EnemyPlane.GetComponent<EnemyVesselScript>().Power = (float)LevelState/30f;
-                            EnemyPlane.transform.position = placedHomes[(int)Random.Range(0f, placedHomes.ToArray().Length-0.1f)].position + new Vector3(Random.Range(-100f, 100f), Random.Range(100f, 1000f), Random.Range(-100f, 100f));
+                            EnemyPlane.GetComponent<EnemyVesselScript>().GuardedTarget = placedHomes[PickHouse].gameObject;
+                            EnemyPlane.transform.position = placedHomes[PickHouse].position + new Vector3(Random.Range(-100f, 100f), Random.Range(100f, 1000f), Random.Range(-100f, 100f));
                         }
                          // Spawn planes
                     } else if (Begin == 4){
@@ -153,7 +156,6 @@ public class RoundScript : MonoBehaviour {
             hpBonus = player.Health / player.MaxHealth * 100f;
             EndGrade = (accBonus + morBonus + hpBonus) / 3f;
             TempMooney = (int)(Level * 250f * (EndGrade/100f));
-            player.mainCanvas.Message(GS.SetText("Mission Accomplished!", "Misja Wykonana!"), Color.white, new float[]{4f, 2f});
             DeadPlane(new Transform[]{player.transform, player.CurrentPlane.transform}, player.Speed, player.ElevatorFlapsRudder, "Leave");
             Destroy(player.gameObject);
         } else if(State == "Quit1"){

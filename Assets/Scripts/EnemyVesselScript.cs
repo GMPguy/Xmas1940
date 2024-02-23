@@ -46,7 +46,7 @@ public class EnemyVesselScript : MonoBehaviour {
 	Vector3 ElevatorFlapsRudder = Vector3.zero;
 	float Stalling = 0f;
 
-	Vector3 Origin;
+	public GameObject GuardedTarget;
     // Ai Bevahiour
 
     // Use this for initialization
@@ -62,42 +62,7 @@ public class EnemyVesselScript : MonoBehaviour {
 			}
 		}
 
-		Origin = this.transform.position;
-
-		if (TypeofVessel == "Messerschmitt") {
-			Health = Mathf.Lerp(10f, 100f, Power);
-			MaxSpeed = Speed = Mathf.Lerp(50f, 200f, Power);
-			RotationSpeed = Mathf.Lerp(0.25f, 2f, Power);
-			GunSpeed = 750f;
-			DetectionDistance = Mathf.Lerp(400f, 1500f, Power);
-		} else if (TypeofVessel == "Messerschmitt Me 262") {
-			Health = Mathf.Lerp(20f, 200f, Power);
-			MaxSpeed = Speed = Mathf.Lerp(300f, 700f, Power);
-			RotationSpeed = Mathf.Lerp(0.25f, 1f, Power);
-			GunSpeed = 2000f;
-			DetectionDistance = Mathf.Lerp(1000f, 5000f, Power);
-		} else if(TypeofVessel == "Messerschmitt K4"){
-			Health = Mathf.Lerp(20f, 200f, Power);
-			MaxSpeed = Speed = Mathf.Lerp(50f, 200f, Power);
-			RotationSpeed = Mathf.Lerp(1f, 3f, Power);
-			GunSpeed = 1000f;
-			DetectionDistance = Mathf.Lerp(400f, 1500f, Power);
-		} else if(TypeofVessel == "Messerschmitt 110"){
-			Health = Mathf.Lerp(50f, 500f, Power);
-			MaxSpeed = Speed = Mathf.Lerp(50f, 200f, Power);
-			RotationSpeed = Mathf.Lerp(0.25f, 1f, Power);
-			GunSpeed = 500f;
-			DetectionDistance = Mathf.Lerp(400f, 1500f, Power);
-		} else if(TypeofVessel == "AA Gun"){
-			Health  = Mathf.Lerp(20f, 200f, Power);
-			GunSpeed = 1000f;
-			DetectionDistance = Mathf.Lerp(250f, 2000f, Power);
-		} else if(TypeofVessel == "Balloon"){
-			Health = Mathf.Lerp(30f, 300f, Power);
-			GunSpeed = 1000f;
-			DetectionDistance = Mathf.Lerp(250f, 2000f, Power);
-		}
-		Speed = MaxSpeed;
+		StatSetUp(0f);
 
         // Set Positions
 		int pickedMarker = 0;
@@ -117,19 +82,54 @@ public class EnemyVesselScript : MonoBehaviour {
 		FarMarker = FarMarkers[pickedMarker];
 		
 	}
+
+	void StatSetUp(float Furious){
+		float PowerActual = Mathf.Lerp(Power, 1f, Furious);
+		if (TypeofVessel == "Messerschmitt") {
+			Health = Mathf.Lerp(10f, 100f, PowerActual);
+			MaxSpeed = Speed = Mathf.Lerp(50f, 200f, PowerActual);
+			RotationSpeed = Mathf.Lerp(0.25f, 2f, PowerActual);
+			GunSpeed = 750f;
+			DetectionDistance = Mathf.Lerp(400f, 1500f, PowerActual);
+		} else if (TypeofVessel == "Messerschmitt Me 262") {
+			Health = Mathf.Lerp(20f, 200f, PowerActual);
+			MaxSpeed = Speed = Mathf.Lerp(300f, 700f, PowerActual);
+			RotationSpeed = Mathf.Lerp(0.25f, 1f, PowerActual);
+			GunSpeed = 2000f;
+			DetectionDistance = Mathf.Lerp(1000f, 5000f, PowerActual);
+		} else if(TypeofVessel == "Messerschmitt K4"){
+			Health = Mathf.Lerp(20f, 200f, PowerActual);
+			MaxSpeed = Speed = Mathf.Lerp(50f, 200f, PowerActual);
+			RotationSpeed = Mathf.Lerp(1f, 3f, PowerActual);
+			GunSpeed = 1000f;
+			DetectionDistance = Mathf.Lerp(400f, 1500f, PowerActual);
+		} else if(TypeofVessel == "Messerschmitt 110"){
+			Health = Mathf.Lerp(50f, 500f, PowerActual);
+			MaxSpeed = Speed = Mathf.Lerp(50f, 200f, PowerActual);
+			RotationSpeed = Mathf.Lerp(0.25f, 1f, PowerActual);
+			GunSpeed = 500f;
+			DetectionDistance = Mathf.Lerp(400f, 1500f, PowerActual);
+		} else if(TypeofVessel == "AA Gun"){
+			Health  = Mathf.Lerp(20f, 200f, PowerActual);
+			GunSpeed = 1000f;
+			DetectionDistance = Mathf.Lerp(250f, 2000f, PowerActual);
+		} else if(TypeofVessel == "Balloon"){
+			Health = Mathf.Lerp(30f, 300f, PowerActual);
+			GunSpeed = 1000f;
+			DetectionDistance = Mathf.Lerp(250f, 2000f, PowerActual);
+		}
+		Speed = MaxSpeed;
+		Power = PowerActual;
+	}
 	
 	// Update is called once per frame
 	void Update () {
 
 		// Find player
 		if (GameObject.Find ("MainPlane") != null) {
-			if(GameObject.Find ("MainPlane").GetComponent<PlayerScript>().Flares <= 0f){
-				PlayerSeen = GameObject.Find ("MainPlane");
-				PlayerActuall = GameObject.Find ("MainPlane");
-			} else {
-				PlayerSeen = null;
-				PlayerActuall = GameObject.Find ("MainPlane");
-			}
+			PlayerActuall = GameObject.Find ("MainPlane");
+			if(GameObject.Find ("MainPlane").GetComponent<PlayerScript>().Flares <= 0f)PlayerSeen = PlayerActuall;
+			else PlayerSeen = null;
 		} else {
 			PlayerSeen = null;
 			PlayerActuall = null;
@@ -369,10 +369,12 @@ public class EnemyVesselScript : MonoBehaviour {
 		float GunDistance = 300f;
 		if(TypeofVessel == "Messerschmitt Me 262") GunDistance = 1000f;
 		// Set gun distance
-		if (WhichOne == "Patrol") {
-			if (Change <= 0f || Vector3.Distance(this.transform.position, PointofInterest) < 100f) {
+		if (GuardedTarget && WhichOne == "Patrol") {
+			float dist = Vector3.Distance(this.transform.position, PointofInterest);
+			if (Change <= 0f || dist < 100f || dist > 2500f) {
 				Change = Random.Range (10f, 30f);
-				PointofInterest = Origin + new Vector3 (Random.Range (-1000f, 1000f), this.transform.position.y + Random.Range (-10f, 10f), Random.Range (-1000f, 1000f));
+				if(GuardedTarget.tag != "Player") PointofInterest = GuardedTarget.transform.position + new Vector3 (Random.Range (-1000f, 1000f), this.transform.position.y + Random.Range (-10f, 10f), Random.Range (-1000f, 1000f));
+				else PointofInterest = GuardedTarget.transform.position;
 			} else {
 				Change -= 0.01f;
 			}
@@ -407,6 +409,12 @@ public class EnemyVesselScript : MonoBehaviour {
 			}
 		}
 		// Think
+
+		// Find guarded target
+		if(GuardedTarget && GuardedTarget.tag == "HomeChecked" && PlayerSeen != null) {
+			StatSetUp(0.5f);
+			GuardedTarget = PlayerSeen;
+		}
 
 	}
 
@@ -533,9 +541,11 @@ public class EnemyVesselScript : MonoBehaviour {
 					break;
 			}
 
-			if (!JustCashOut) PlayerActuall.GetComponent<PlayerScript> ().mainCanvas.Message(GS.SetText(Message[0], Message[1]), Color.white, new float[]{2f, 1.5f});
+			if (!JustCashOut) {
+				PlayerActuall.GetComponent<PlayerScript> ().mainCanvas.Message(GS.SetText(Message[0], Message[1]), Color.white, new float[]{2f, 1.5f});
+				GS.statModify(TypeofVessel + " take downs", 1);
+			}
 			GS.GainScore (Score);
-			GS.statModify(TypeofVessel + " take downs", 1);
 		}
 
 	}

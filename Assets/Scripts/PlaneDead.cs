@@ -34,16 +34,19 @@ public class PlaneDead : MonoBehaviour {
 				Destroy(GameObject.FindGameObjectsWithTag("DeadPlane")[0]);
 		}
 
-		if(Spec != "Leave"){
-			foreach(Transform cleanP in PlaneModel.transform){
-				if(cleanP.name == "Propeller" || cleanP.name == "Basic Propeller" || cleanP.name == "Double Propeller" || cleanP.name == "Jet Engine" || cleanP.name == "Double Jet Engine" || cleanP.name == "Magic Reindeer Dust"){
-					Destroy(cleanP.gameObject);
-				}
+		foreach(Transform cleanP in PlaneModel.transform){
+			if(cleanP.name == "Propeller" || cleanP.name == "Basic Propeller" || cleanP.name == "Double Propeller" || cleanP.name == "Jet Engine" || cleanP.name == "Double Jet Engine" || cleanP.name == "Magic Reindeer Dust"){
+				if(Spec == "Leave") cleanP.GetComponent<AudioSource>().Stop();
+				else Destroy(cleanP.gameObject);
 			}
 		}
 
 		if(Spec == "Leave" || QualitySettings.GetQualityLevel() <= 1){
 			Fire.Stop(); Smoke.Stop();
+		}
+
+		if(Spec == "Leave"){
+			PreviousSpeed = Mathf.Clamp(PreviousSpeed, 100, Mathf.Infinity);
 		}
 
 	}
@@ -73,6 +76,11 @@ public class PlaneDead : MonoBehaviour {
 		if(isMine){
 			if(Spec == "Leave"){
 				PreviousRotation = new Vector3(-1f, PreviousRotation.y, PreviousRotation.z / 10f);
+				if (GoBackToMenu > 0f) {
+					GoBackToMenu -= 0.01f;
+				} else {
+					this.transform.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, GoBackToMenu/5f);
+				}
 			} else {
 				GameObject.Find ("MainCamera").transform.LookAt (this.transform.position, this.transform.up * 1f);
 	        	if (GoBackToMenu > 0f) {
