@@ -34,7 +34,7 @@ public class ProjectileScript : MonoBehaviour {
 	public ParticleSystem mSmoke;
 	public GameObject TheGunFire;
 	public AudioClip[] GunFires;
-
+	public AudioSource BombWhistle;
     // References
 
     // Use this for initialization
@@ -117,6 +117,15 @@ public class ProjectileScript : MonoBehaviour {
 			ChostBullet = Present; GunFireSound = "PresentCannon";
 			ICtype = 1;
 			break;
+		case "Homing Present":
+			ChostBullet = HomingMissile; GunFireSound = "MissileLaunch"; Smoke = false;
+			ICtype = 1;
+			break;
+		case "Dropped Present": case "Carpet Presents":
+			ChostBullet = Present; GunFireSound = "ReleaseHatch"; Smoke = false;
+			BombWhistle.Play();
+			ICtype = 1;
+			break;
 		case "Homing Missile":
 			ChostBullet = HomingMissile; GunFireSound = "MissileLaunch";
 			BulletVars = new float[]{Random.Range(50f, 100f), PreviusSpeed, 1000f, 0f};
@@ -145,19 +154,22 @@ public class ProjectileScript : MonoBehaviour {
 
 		ChostBullet.gameObject.SetActive (true);
 
-		for(int fs = 0; fs <= GunFires.Length; fs++){
-			if(fs == GunFires.Length) Debug.LogError("No gunfire sound of name " + GunFireSound + " found!");
-			else if (GunFires[fs].name == GunFireSound){
-				TheGunFire.GetComponent<AudioSource>().clip = GunFires[fs];
-				TheGunFire.transform.parent = GunFirePos.transform;
-				TheGunFire.transform.position = GunFirePos.position;
-				TheGunFire.GetComponent<AudioSource>().Play();
-				break;
+		if(GunFirePos){
+			for(int fs = 0; fs <= GunFires.Length; fs++){
+				if(fs == GunFires.Length) Debug.LogError("No gunfire sound of name " + GunFireSound + " found!");
+				else if (GunFires[fs].name == GunFireSound){
+					TheGunFire.GetComponent<AudioSource>().clip = GunFires[fs];
+					TheGunFire.transform.parent = GunFirePos.transform;
+					TheGunFire.transform.position = GunFirePos.position;
+					TheGunFire.GetComponent<AudioSource>().pitch = Random.Range(0.9f, 1.1f);
+					TheGunFire.GetComponent<AudioSource>().Play();
+					break;
+				}
 			}
 		}
 
         if (TypeofGun == "Paintball") {
-			ParticleSystem.MainModule PC = Paintball.transform.GetChild(0).GetComponent<ParticleSystem>().main;
+			ParticleSystem.MainModule PC = Paintball.GetComponent<ParticleSystem>().main;
             PC.startColor = PresentColor1;
         }
 
@@ -182,7 +194,10 @@ public class ProjectileScript : MonoBehaviour {
 
 		if(Vector3.Distance(this.transform.position, StartPos) > Range && Hit == false && TypeofGun != "Laser" && TypeofGun != "Blue Laser"){
 			Hit = true;
-			if(ICtype == 1) GS.statModify("Presents missed", 1);
+			if(ICtype == 1) {
+				GameObject.Find("MainCanvas").GetComponent<CanvasScript>().Message(GS.SetText("Present missed", "Prezent spudłował"), Color.red, new float[]{3f, 1f});
+				GS.statModify("Presents missed", 1);
+			}
 			if(TypeofGun == "Flak" || TypeofGun == "Homing Missile"){
 				GameObject Boom = Instantiate (Special) as GameObject;
 				Boom.GetComponent<SpecialScript> ().TypeofSpecial = "Explosion";
@@ -225,7 +240,7 @@ public class ProjectileScript : MonoBehaviour {
         // Raycast Detection
 
         // Projectiles special
-        if (ICtype == 1) {
+        if (ICtype == 1 && TypeofGun != "Homing Present") {
             foreach (Material Mat in Present.GetComponent<MeshRenderer>().materials) {
                 if (Mat.name == "Material1 (Instance)") {
                     Mat.color = PresentColor1;
@@ -233,7 +248,7 @@ public class ProjectileScript : MonoBehaviour {
                     Mat.color = PresentColor2;
                 }
             }
-        } else if (TypeofGun == "Homing Missile") {
+        } else if (TypeofGun == "Homing Missile" || TypeofGun == "Homing Present") {
 
             if (HomingMissileTarget != null) {
                 this.transform.rotation = Quaternion.Lerp(this.transform.rotation, Quaternion.LookRotation(new Vector3(HomingMissileTarget.transform.position.x, HomingMissileTarget.transform.position.y, HomingMissileTarget.transform.position.z) - this.transform.position), Speed / (PreviusSpeed*10f));
@@ -242,10 +257,13 @@ public class ProjectileScript : MonoBehaviour {
                     if (WhoShot.GetComponent<PlayerScript>() != null) {
                         float Distance = 1000f;
                         GameObject ChoosenTarget = null;
-                        foreach (GameObject Enemy in GameObject.FindGameObjectsWithTag("Foe")) {
-                            if (Vector3.Distance(this.transform.position, Enemy.transform.position) < Distance) {
-                                Distance = Vector3.Distance(this.transform.position, Enemy.transform.position);
-                                ChoosenTarget = Enemy;
+						GameObject[] Targets = {};
+						if(TypeofGun == "Homing Missile") Targets = GameObject.FindGameObjectsWithTag("Foe");
+						else if(TypeofGun == "Homing Present") Targets = GameObject.FindGameObjectsWithTag("HomeUnchecked");
+                        foreach (GameObject Target in Targets) {
+                            if (Vector3.Distance(this.transform.position, Target.transform.position) < Distance) {
+                                Distance = Vector3.Distance(this.transform.position, Target.transform.position);
+                                ChoosenTarget = Target;
                             }
                         }
                         if (ChoosenTarget != null) {
@@ -274,7 +292,27 @@ public class ProjectileScript : MonoBehaviour {
         } else if (TypeofGun == "Brick") {
             Brick.transform.Rotate(1f, 1f, 1f);
             this.transform.eulerAngles += new Vector3(0.1f, 0f, 0f);
-        }
+        } else if (TypeofGun == "Rocket") {
+			if (HomingMissileTarget != null) {
+                this.transform.rotation = Quaternion.Lerp(this.transform.rotation, Quaternion.LookRotation(new Vector3(HomingMissileTarget.transform.position.x, HomingMissileTarget.transform.position.y, HomingMissileTarget.transform.position.z) - this.transform.position), Mathf.Lerp(1f, 0f, Vector3.Distance(this.transform.position, HomingMissileTarget.transform.position) / 300f));
+            } else {
+                if (WhoShot != null) {
+                    if (WhoShot.GetComponent<PlayerScript>() != null) {
+                        float Angle = 1000f;
+                        GameObject ChoosenTarget = null;
+                        foreach (GameObject Enemy in GameObject.FindGameObjectsWithTag("Foe")) {
+                            if (Quaternion.Angle (WhoShot.transform.rotation, Quaternion.LookRotation (Enemy.transform.position - WhoShot.transform.position)) < Angle) {
+                                Angle = Quaternion.Angle (WhoShot.transform.rotation, Quaternion.LookRotation (Enemy.transform.position - WhoShot.transform.position));
+                                ChoosenTarget = Enemy;
+                            }
+                        }
+                        if (ChoosenTarget != null) {
+                            HomingMissileTarget = ChoosenTarget;
+                        }
+                    }
+                }
+            }
+		}
 		// Projectiles special
 
 		// Destroying projectile
@@ -287,10 +325,10 @@ public class ProjectileScript : MonoBehaviour {
                     Destroy(this.gameObject);
                 }
 				break;
-            case "Brick": case "Slingshot": case "Present Cannon": case "Sniper Rifle":
+            case "Brick": case "Slingshot": case "Present Cannon": case "Sniper Rifle": case "Homing Present": case "Dropped Present": case "Carpet Presents":
                 Destroy(this.gameObject);
 				break;
-			case "Homing Missile":
+			case "Homing Missile": case "Rocket":
 				ChostBullet.transform.GetChild (0).gameObject.SetActive (false);
 				if (mSmoke.particleCount <= 0f) {
 					Destroy (this.gameObject);
@@ -322,33 +360,6 @@ public class ProjectileScript : MonoBehaviour {
 		if (Hit == false && Col.tag != "Cloud" && Col.tag != "Explosion") {
 			bool pDelivered = false;
 			bool sHit = false;
-			if(TypeofGun == "Flammable"){
-				int chance = Random.Range (0, 5);
-				if(chance == 0){
-					GameObject Boom = Instantiate (Special) as GameObject;
-					Boom.GetComponent<SpecialScript> ().TypeofSpecial = "Explosion";
-					Boom.GetComponent<SpecialScript> ().ExplosionPower = 25f;
-					Boom.GetComponent<SpecialScript> ().ExplosionRadius = 5f;
-					Boom.transform.position = HitPoint;
-					if (WhoShot != null){
-						if(WhoShot.tag == "Player"){
-							Boom.GetComponent<SpecialScript> ().CausedByPlayer = true;
-						}
-					}
-				}
-			} else if (TypeofGun == "Flak" || TypeofGun == "Homing Missile" || TypeofGun == "Rocket"){
-				Hit = true;
-				GameObject Boom = Instantiate (Special) as GameObject;
-				Boom.GetComponent<SpecialScript> ().TypeofSpecial = "Explosion";
-				Boom.GetComponent<SpecialScript> ().ExplosionPower = 25f;
-				Boom.GetComponent<SpecialScript> ().ExplosionRadius = 5f;
-				Boom.transform.position = HitPoint;
-				if (WhoShot != null){
-					if(WhoShot.tag == "Player"){
-						Boom.GetComponent<SpecialScript> ().CausedByPlayer = true;
-					}
-				}
-			}
 
 			bool FiredByEnemy = false;
 			if(WhoShot != null){
@@ -405,17 +416,45 @@ public class ProjectileScript : MonoBehaviour {
 				}
 			}
 
-            if (TypeofGun == "Paintball") {
-                GameObject Efect = Instantiate(Effect) as GameObject;
-                Efect.GetComponent<EffectScript>().TypeofEffect = "PaintballHit";
-				ParticleSystem.MainModule EC = Efect.GetComponent<EffectScript>().PaintballHit.GetComponent<ParticleSystem>().main;
-                EC.startColor = new Color(PresentColor1.r, PresentColor1.g, PresentColor1.b, 0.25f);
-                Efect.transform.position = HitPoint;
-            } else if (ICtype == 1){
-				if(pDelivered) GS.statModify("Presents delivered", 1);
-				else {
-					GameObject.Find("MainCanvas").GetComponent<CanvasScript>().Message(GS.SetText("Present missed", "Prezent spudłował"), Color.red, new float[]{3f, 1f});
-					GS.statModify("Presents missed", 1);
+			if(Hit){
+				if(TypeofGun == "Flammable"){
+					int chance = Random.Range (0, 5);
+					if(chance == 0){
+						GameObject Boom = Instantiate (Special) as GameObject;
+						Boom.GetComponent<SpecialScript> ().TypeofSpecial = "Explosion";
+						Boom.GetComponent<SpecialScript> ().ExplosionPower = 25f;
+						Boom.GetComponent<SpecialScript> ().ExplosionRadius = 5f;
+						Boom.transform.position = HitPoint;
+						if (WhoShot != null){
+							if(WhoShot.tag == "Player"){
+								Boom.GetComponent<SpecialScript> ().CausedByPlayer = true;
+							}
+						}
+					}
+				} else if (TypeofGun == "Flak" || TypeofGun == "Homing Missile" || TypeofGun == "Rocket"){
+					Hit = true;
+					GameObject Boom = Instantiate (Special) as GameObject;
+					Boom.GetComponent<SpecialScript> ().TypeofSpecial = "Explosion";
+					Boom.GetComponent<SpecialScript> ().ExplosionPower = 25f;
+					Boom.GetComponent<SpecialScript> ().ExplosionRadius = 5f;
+					Boom.transform.position = HitPoint;
+					if (WhoShot != null){
+						if(WhoShot.tag == "Player"){
+							Boom.GetComponent<SpecialScript> ().CausedByPlayer = true;
+						}
+					}
+				} else if (TypeofGun == "Paintball") {
+    	            GameObject Efect = Instantiate(Effect) as GameObject;
+	                Efect.GetComponent<EffectScript>().TypeofEffect = "PaintballHit";
+					ParticleSystem.MainModule EC = Efect.GetComponent<EffectScript>().PaintballHit.GetComponent<ParticleSystem>().main;
+            	    EC.startColor = new Color(PresentColor1.r, PresentColor1.g, PresentColor1.b, 0.25f);
+        	        Efect.transform.position = HitPoint;
+    	        } else if (ICtype == 1){
+					if(pDelivered) GS.statModify("Presents delivered", 1);
+					else {
+						GameObject.Find("MainCanvas").GetComponent<CanvasScript>().Message(GS.SetText("Present missed", "Prezent spudłował"), Color.red, new float[]{3f, 1f});
+						GS.statModify("Presents missed", 1);
+					}
 				}
 			}
 

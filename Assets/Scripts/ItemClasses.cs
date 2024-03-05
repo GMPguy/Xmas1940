@@ -65,18 +65,21 @@ public class ItemClasses : MonoBehaviour {
             Range = sRanges; Damage = sDamage; Cooldown = sCooldown; Speed = sSpeed; Spread = sSpread;
             string strDamage = sDamage[0].ToString(); if (sDamage[0] != sDamage[1]) strDamage += "-" + sDamage[1].ToString();
             string strRange = sRanges[0].ToString(); if (sRanges[0] != sRanges[1]) strRange += "-" + sRanges[1].ToString();
-            Desc[0] = "Damage: " + strDamage + "\nRange: " + strRange + "m\nFiring speed: " + sCooldown[0] + " seconds\nTime to overheat: " + sCooldown[1] + " seconds\nTime to cooldown: " + sCooldown[2] + " seconds\nTravel speed: " + Speed + " km/s\nGun spread: " + sSpread + "°\n\n" + sDesc[0];
-            Desc[1] = "Obrażenia: " + strDamage + "\nDystans: " + strRange + "m\nPrędkość strzelania: " + sCooldown[0] + " sekund\nCzas do przegrzania: " + sCooldown[1] + " sekund\nCzas do schłodzenia: " + sCooldown[2] + " sekund\nPrędkość pocisków: " + Speed + " km/s\nRozrzut broni: " + sSpread + "°\n\n" + sDesc[1];
+            string strSpeed = sSpeed.ToString() + "km/h"; if (sSpeed == 0) strSpeed = "1c";
+            Desc[0] = "Damage: " + strDamage + "\nRange: " + strRange + "m\nFiring speed: " + sCooldown[0] + " seconds\nTime to overheat: " + sCooldown[1] + " seconds\nTime to cooldown: " + sCooldown[2] + " seconds\nTravel speed: " + strSpeed + "\nGun spread: " + sSpread + "°\n\n" + sDesc[0];
+            Desc[1] = "Obrażenia: " + strDamage + "\nDystans: " + strRange + "m\nPrędkość strzelania: " + sCooldown[0] + " sekund\nCzas do przegrzania: " + sCooldown[1] + " sekund\nCzas do schłodzenia: " + sCooldown[2] + " sekund\nPrędkość pocisków: " + strSpeed + "\nRozrzut broni: " + sSpread + "°\n\n" + sDesc[1];
         }
     }
 
     public class Present : Item{
         public int Type; // 0 Cannon, 1 Homing, 2 Drop
         public float Speed, Range, Cooldown;
-        public Present(int sCategory, int sPrice, string[] sNames, string[] sDesc, float sSpeed, float sRange, float sCooldown) : base(sCategory, sPrice, sNames, sDesc){
-            Speed = sSpeed; Range = sRange; Cooldown = sCooldown;
-            Desc[0] = "Travel speed: " + sSpeed + " km/h\nRange: " + sRange + "m\nFiring speed: " + sCooldown + " seconds\n\n" + sDesc[0];
-            Desc[1] = "Prędkość pocisków: " + sSpeed + " km/h\nDystans: " + sRange + "m\nPrędkość strzelania: " + sCooldown + " seconds\n\n" + sDesc[1];
+        public Present(int sCategory, int sPrice, string[] sNames, string[] sDesc, float sSpeed, float sRange, float sCooldown, int sType) : base(sCategory, sPrice, sNames, sDesc){
+            Speed = sSpeed; Range = sRange; Cooldown = sCooldown; Type = sType;
+            string[] strSpeed = {sSpeed + "km/h", sSpeed + "km/h"}; 
+            if (sSpeed == 0) strSpeed = new string[]{"inherited", "dziedziczona"};
+            Desc[0] = "Travel speed: " + strSpeed[0] + "km/h\nRange: " + sRange + "m\nFiring speed: " + sCooldown + " seconds\n\n" + sDesc[0];
+            Desc[1] = "Prędkość pocisków: " + strSpeed[1] + "km/h\nDystans: " + sRange + "m\nPrędkość strzelania: " + sCooldown + " seconds\n\n" + sDesc[1];
         }
     }
 
@@ -129,7 +132,7 @@ public class ItemClasses : MonoBehaviour {
             new(7, 0,
                 new string[]{"Falcon Dart", "Falcon Dart"},
                 new string[]{"Desc", "Desc"},
-                150f, 150f, 0.5f, 400f, 2),
+                150f, 150f, 0.5f, 300f, 2),
 
             new(8, 0,
                 new string[]{"SP Albatross", "SP Albatross"},
@@ -138,11 +141,11 @@ public class ItemClasses : MonoBehaviour {
             new(9, 0,
                 new string[]{"SP Arrow", "SP Arrow"},
                 new string[]{"Desc", "Desc"},
-                150f, 175f, 0.5f, 600f, 2),
+                150f, 175f, 0.5f, 400f, 2),
             new(10, 0,
                 new string[]{"SP Eagle", "SP Eagle"},
                 new string[]{"Desc", "Desc"},
-                250f, 250f, 2f, 225f, 0),
+                250f, 250f, 1.25f, 250f, 0),
 
             new(11, 0,
                 new string[]{"Stolen Messerschmitt", "Skradziony Messerschmitt"},
@@ -192,6 +195,9 @@ public class ItemClasses : MonoBehaviour {
             new(4, 0,
                 new string[]{"Brick", "Cegła"},
                 new string[]{"Desc", "Desc"}, 10f),
+            new(5, 0,
+                new string[]{"Flares", "Flary"},
+                new string[]{"Desc", "Desc"}, 30f),
         };
 
         Guns = new Gun[]{
@@ -247,14 +253,14 @@ public class ItemClasses : MonoBehaviour {
                 new string[]{"Laser", "Laser"},
                 new string[]{"Desc", "Desc"},
                 new float[]{500f, 500f},
-                new float[]{0.075f, 15f, 9999f},
-                new float[]{5f, 20f}, 9999f, 0f),
+                new float[]{0.075f, 15f, 0f},
+                new float[]{5f, 20f}, 0f, 0f),
             new(9, 0,
                 new string[]{"Blue Laser", "Niebieski laser"},
                 new string[]{"Desc", "Desc"},
                 new float[]{1000f, 1000f},
-                new float[]{0.075f, 15f, 9999f},
-                new float[]{15f, 20f}, 9999f, 0f),
+                new float[]{0.075f, 15f, 0f},
+                new float[]{15f, 20f}, 0f, 0f),
             new(10, 0,
                 new string[]{"Paintball", "Paintball"},
                 new string[]{"Desc", "Desc"},
@@ -271,21 +277,29 @@ public class ItemClasses : MonoBehaviour {
 
         Presents = new Present[]{
             new(0, 0,
+                new string[]{"Dropped Present", "Zrzucany prezent"},
+                new string[]{"Desc", "Desc"},
+                0f, 2000f, 5f, 2),
+            new(1, 0,
                 new string[]{"Slingshot", "Slingshot"},
                 new string[]{"Desc", "Desc"},
-                400f, 400f, 10f),
-            new(1, 0,
+                0f, 400f, 10f, 0),
+            new(2, 0,
                 new string[]{"Present Cannon", "Armata na prezenty"},
                 new string[]{"Desc", "Desc"},
-                1000f, 1000f, 10f),
-            new(2, 0,
+                1000f, 1000f, 10f, 0),
+            new(3, 0,
+                new string[]{"Carpet Presents", "Prezenty dywanowe"},
+                new string[]{"Desc", "Desc"},
+                0f, 2000f, 1f, 2),
+            new(4, 0,
                 new string[]{"Sniper Rifle", "Karabin snajperski"},
                 new string[]{"Desc", "Desc"},
-                10000f, 10000f, 30f),
-            new(3, 0,
+                1000f, 10000f, 30f, 0),
+            new(5, 0,
                 new string[]{"Homing Present", "Samonaprowadzający prezent"},
                 new string[]{"Desc", "Desc"},
-                400f, 500f, 30f),
+                0f, 500f, 30f, 1),
         };
 
         Additions = new Special[]{

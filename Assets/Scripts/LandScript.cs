@@ -27,7 +27,7 @@ public class LandScript : MonoBehaviour {
 						Mathf.PerlinNoise( (NewLand.transform.position.z / 0.3333f) + Seed, (NewLand.transform.position.x / 0.3333f) + Seed)
 					};
 
-					NewLand.transform.GetChild((int)(ChostLand[0]*2.9f)).gameObject.SetActive(true);
+					NewLand.transform.GetChild((int)(ChostLand[0]*2.9f)).gameObject.SetActive(true); // Something here fuck up - fix it later
 					GameObject Land = NewLand.transform.GetChild((int)(ChostLand[0]*2.9f)).gameObject;
 					NewLand.transform.Rotate(Vector3.up * ((int)(ChostLand[1]*3.9f) * 90f));
 

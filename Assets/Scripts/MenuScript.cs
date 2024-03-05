@@ -2,7 +2,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Services.Analytics;
+using UnityEditor.Build;
 using UnityEditor.PackageManager;
+using UnityEditor.PackageManager.UI;
 using UnityEngine;
 using UnityEngine.UI;
 using Random=UnityEngine.Random;
@@ -16,47 +18,45 @@ public class MenuScript : MonoBehaviour {
 	public GameObject AnchorUp;
 	public GameObject AnchorDown;
 	// Loading
+	public Transform LoadingWindow;
 	public Text LoadingText;
 	public Text LoadingTipText;
 	// Loading
 	// Prologue
+	public Transform PrologueWindow;
 	public Text PrologueText;
 	public Image PrologueBlackImage;
 	// Prologue
 	// Start
+	public Transform StartWindow;
 	public Text VersionName;
 	// Start
 	// Main
-	public GameObject StartButton;
-	public GameObject OptionButton;
-	public GameObject CreditsButton;
-	public GameObject ExitButton;
+	public Transform MainWindow;
+	public ButtonScript[] MainButtons;
+	public Text[] MainButtonTextes;
+	int SelectedFile = 0;
 	// Main
-	// Play
-	public GameObject NewGameButton;
-	public GameObject ContinueGameButton;
-	public GameObject PlayBackButton;
-	public Text HighScores;
-	// Play
-	// New Game
-	public GameObject CNormalButton;
-	public GameObject CHardButton;
-	public GameObject NewGameBack;
-	// New Game
-	// New Game Info
-	public GameObject NGInfoText;
-	public int NGWchicPage = 1;
-	public GameObject NGBegin;
-	// New Game Info
-	// Credits
-	public Text Credits;
-	public GameObject CreditsBack;
-	// Credits
-	// Options
-	public ButtonScript[] OptionButtons;
-	public ButtonScript OptionsBack;
-	// Options
+	// New game
+	public Transform NewGameWindow;
+	public Text NGtitle;
+	public InputField NGinput;
+	public GameObject[] NGbuttons;
+	int NGchosenMode = 0;
+	int NGchosenDiff = 0;
+	// New game
+	// Scores
+	public Transform ScoresWindow;
+	public ButtonScript[] ScoreButtons;
+	public Text[] ScoreButtonTextes;
+	public Text sTitle;
+	public Text sScores;
+	string prevScore, scoreMain = "";
+	int sMode, sDiff = 0; 
+	int sSorting = -1;
+	// Scores
 	// Campaign Main
+	public Transform CMainWidnow;
 	public GameObject CMPlayButton;
 	public GameObject CMCustomizeButton;
 	public GameObject CMQuitButton;
@@ -66,6 +66,7 @@ public class MenuScript : MonoBehaviour {
     public Text CMPText;
 	// Campaign Main
 	// Campaign Customization
+	public Transform CCustomWindow;
 	public GameObject CustomizationBack;
 	public Text CCInfo;
     public Image CCPImage;
@@ -95,10 +96,12 @@ public class MenuScript : MonoBehaviour {
 	public AudioSource[] CustomizationSounds; // Buy, equip
     // Campaign Customization
     // Campaign Message
+	public Transform CMessWindow;
     public Text MessageText;
     public GameObject CloseMessage;
     // Campaign Message
 	// Game Over
+	public Transform GameOverWindow;
 	public Image GameOverImage;
 	public Text GameOverText;
 	public Text GameOverText2;
@@ -121,7 +124,8 @@ public class MenuScript : MonoBehaviour {
 	//References
 
 	// Variables
-	public string CurrentWindow = "Prologue";
+	public string[] CurrentWindow = {"Prologue", ""}; // current, previous
+	float WindowLoaded = 0f;
 	float Loading = 3f;
 	int LoadingTip = 1;
 	// variables
@@ -164,52 +168,17 @@ public class MenuScript : MonoBehaviour {
 		GS.SetLighting((int)Random.Range(0f, 3.9f));
 		// Set sky color
 
+
+		Cursor.lockState = CursorLockMode.None;
 		Cursor.visible = true;
 		
 	}
 	
-	// Update is called once per frame
-	void Update () {
-
-        SettingMessage();
-        if (GS.WhichMenuWindowToLoad != ""){
-			CurrentWindow = GS.WhichMenuWindowToLoad;
-			GS.WhichMenuWindowToLoad = "";
-		}
-
-		// Set Windows
-		if (Loading > 0f) {
-			foreach (Transform Window in Windows.transform) {
-				if (Window.name == "Loading") {
-					Window.position = AnchorUp.transform.position;
-				} else {
-					Window.position = AnchorDown.transform.position;
-				}
-			}
-		} else {
-			LoadingTip = Random.Range (1, 7);
-			foreach (Transform Window in Windows.transform) {
-				if (Window.name == CurrentWindow) {
-					if (Window.name == "Prologue" || Window.name == "GameOver") {
-						Window.position = AnchorUp.transform.position;
-					} else {
-						Window.position = Vector3.Lerp (Window.position, AnchorUp.transform.position, 0.1f * (Time.deltaTime * 100f));
-					}
-				} else {
-					if (Window.name == "Loading") {
-						Window.position = AnchorDown.transform.position;
-					} else {
-						Window.position = Vector3.Lerp (Window.position, AnchorDown.transform.position, 0.1f * (Time.deltaTime * 100f));
-					}
-				}
-			}
-		}
-        // Set Windows
-
-        // Windows actions
-        if (Loading > 0f) {
-            Loading -= 0.01f;
-            LoadingText.text = GS.SetText("Loading", "Wczytywanie");
+	void WhileLoading(bool show = false){
+		if(show){
+			Loading -= Time.deltaTime;
+			LoadingWindow.transform.position = AnchorUp.transform.position;
+			LoadingText.text = GS.SetText("Loading", "Wczytywanie");
 			switch(LoadingTip){
 	            case 1:
     	            LoadingTipText.text = GS.SetText("While dogfightig, try shooting in advance if you're not directly behind/in front of your opponent!", "Gdy strzelasz do ruchomych objektów, spróbuj strzelać z wyprzedzeniem, jeśli nie jesteś prosto za/przed celem");
@@ -229,215 +198,420 @@ public class MenuScript : MonoBehaviour {
 				case 6:
             	    LoadingTipText.text = GS.SetText("Having speed greater than 175% damages the plane. If you have speed lower than 25%, you'll be unable to rotate your aircraft", "Jeśli twoja prędkość wyniesie więcej niż 175%, zaczniesz tracić zdrowie. Jeśli zaś będzie wynosić mniej niż 25%, nie będziesz mógł obracać swojej maszyny");
 					break;
-            }
-        } else if (CurrentWindow == "Prologue") {
+			}
+		} else if(GS.WhichMenuWindowToLoad != ""){
+			CurrentWindow[0] = GS.WhichMenuWindowToLoad;
+			GS.WhichMenuWindowToLoad = "";
+		} else {
+			LoadingWindow.transform.position = AnchorDown.transform.position;
+			LoadingTip = (int)Random.Range(0f, 6.9f);
+		}
+	}
 
-            if (CurrentMusic != "Prologue") {
-                PlayMusic("Prologue");
-            }
+	void Cutscene(string WhichOne = ""){
 
-            PrologueBlackImage.color = new Color32(0, 0, 0, (byte)((Vector3.Distance(PrologueText.transform.position, AnchorUp.transform.position) / (Screen.height * 0.75f)) * 255f));
-            PrologueText.transform.position = Vector3.MoveTowards(PrologueText.transform.position, AnchorUp.transform.position, ((float)Screen.height / 5000f) * (Time.deltaTime * 100f));
-            PrologueText.text = GS.SetText(
-                "Let me tell you a Christmas story:\n\n It is year 1940. It has been about a year, since the German invasion of Poland, and the following beginning of the Second World War. The German forces have been continuing to fight and invade other countries ever since, and it doesn't look like it's going to end anytime soon. Although Germany's occupying almost the entirety of europe, the fight is still present everywhere: on the land, on the sea, and in the sky. It is now December 25th, and Christmas broke out. It is a time, when Santa Claus is flying in his sleigh, and is delivering presents to the kind children. But since there is a grand conflict going on, he cannot be flying in his sleigh, because that's too dangerous! For that reason, he has replaced his sleigh and his reindeers, with a modern, heavily armed, military-class airplane. Now, he'll deliver the presents without getting stopped, and if any nazi scum will try to ruin the christmas spirit, that scum shall bite the dust! Or maybe Santa Claus will be the one who's gonna be taken down? Find it out, in...",
-                "Pozwól że opowiem ci świąteczną opowieść:\n\n Jest rok 1940. Minął rok od Niemieckiej inwazji na Polskę, oraz rozpoczęcia drugiej wojny światowej. Siły niemieckie dalej kontynuują inwazję na nie swoje ziemie, i wydawać by się mogło, że taki stan rzeczy prędko się nie zmieni. Pomimo tego, iż Niemcy okupują już prawie całą europę, walka dalej jest kontynuowana: na ziemi, na wodzie, i w powietrzu. Nadszedł jednak 25'ego grudnia, a wraz z nim, Święta Bożego Narodzenia. Jest to czas, w którym Święty Mikołaj lata na swych saniach, i rozdaje prezenty grzecznym dziecią. Jednak, ze względu na wielki konflikt zbrojeniowy, nie może latać on w swych saniach, gdyż to jest niebiezpieczne! Z tego powodu, zastąpił on swoje sanie i renifery, świetnie uzbrojonym samolotem klasy wojskowej. Teraz, może w spokoju porozdawać dziecią ich prezenty, a jeśli jakiś szkop zechce zrujnować świąteczny nastrój, będzie on gryzł piach! A może to jednak Święty Mikołaj będzie tym, którego zestrzelą? Zaraz się tego dowiemy, w...");
-            if (Input.anyKeyDown) {
-                CurrentWindow = "Start";
-            }
-
-        } else if (CurrentWindow == "Start") {
-
-            VersionName.text = GS.SetText("Version " + GS.Version, "Version " + GS.Version);
-            MainCamera.transform.position = Vector3.Lerp(MainCamera.transform.position, GameObject.Find("StartCamera").transform.position, 0.1f * (Time.deltaTime * 100f));
-            MainCamera.transform.rotation = Quaternion.Lerp(MainCamera.transform.rotation, GameObject.Find("StartCamera").transform.rotation, 0.1f * (Time.deltaTime * 100f));
-            if (Input.anyKeyDown) {
-                CurrentWindow = "Main";
-            }
-
-        } else if (CurrentWindow == "Main") {
-
-            StartButton.GetComponent<Text>().text = GS.SetText("Play", "Graj");
-            OptionButton.GetComponent<Text>().text = GS.SetText("Options", "Opcje");
-            CreditsButton.GetComponent<Text>().text = GS.SetText("Credits", "Lista Płac");
-            ExitButton.GetComponent<Text>().text = GS.SetText("Exit", "Wyjdź");
-
-            if (StartButton.GetComponent<ButtonScript>().IsSelected == true && Input.GetMouseButtonDown(0)) {
-                CurrentWindow = "Play";
-            } else if (OptionButton.GetComponent<ButtonScript>().IsSelected == true && Input.GetMouseButtonDown(0)) {
-                CurrentWindow = "Options";
-            } else if (CreditsButton.GetComponent<ButtonScript>().IsSelected == true && Input.GetMouseButtonDown(0)) {
-                CurrentWindow = "Credits";
-            } else if (ExitButton.GetComponent<ButtonScript>().IsSelected == true && Input.GetMouseButtonDown(0)) {
-                Application.Quit();
-            }
-
-        } else if (CurrentWindow == "Play") {
-
-            NewGameButton.GetComponent<Text>().text = GS.SetText("New Game", "Nowa Gra");
-            if (PlayerPrefs.HasKey("TESTSavedGame")) {
-                ContinueGameButton.GetComponent<Text>().text = GS.SetText("Continue Game", "Kontynuuj grę");
-                ContinueGameButton.GetComponent<ButtonScript>().IsActive = true;
-            } else {
-                ContinueGameButton.GetComponent<Text>().text = GS.SetText("", "");
-                ContinueGameButton.GetComponent<ButtonScript>().IsActive = false;
-            }
-            ExitButton.GetComponent<Text>().text = GS.SetText("Exit", "Wyjdź");
-            HighScores.text = GS.SetText("High Score: " + GS.HighScore, "Najwyższy Wynik: " + GS.HighScore);
-
-            if (NewGameButton.GetComponent<ButtonScript>().IsSelected == true && Input.GetMouseButtonDown(0)) {
-                CurrentWindow = "NewGame";
-            } else if (ContinueGameButton.GetComponent<ButtonScript>().IsSelected == true && Input.GetMouseButtonDown(0) && PlayerPrefs.HasKey("TESTSavedGame")) {
-                CurrentWindow = "CampaignMain";
-                GS.SetGameOptions("Load", "TEST");
-            } else if (PlayBackButton.GetComponent<ButtonScript>().IsSelected == true && Input.GetMouseButtonDown(0)) {
-                CurrentWindow = "Main";
-            }
-
-        } else if (CurrentWindow == "NewGame") {
-
-            CNormalButton.GetComponent<Text>().text = GS.SetText("Normal", "Średni");
-            CHardButton.GetComponent<Text>().text = GS.SetText("Hard", "Trudny");
-            ExitButton.GetComponent<Text>().text = GS.SetText("Exit", "Wyjdź");
-
-            if (CNormalButton.GetComponent<ButtonScript>().IsSelected == true && Input.GetMouseButtonDown(0)) {
-                CurrentWindow = "NewGameInfo";
-                GS.SetGameOptions("Empty", "");
-                GS.DifficultyLevel = 1;
-                GS.Parachutes = 3;
-            } else if (CHardButton.GetComponent<ButtonScript>().IsSelected == true && Input.GetMouseButtonDown(0)) {
-                CurrentWindow = "NewGameInfo";
-                GS.SetGameOptions("Empty", "");
-                GS.DifficultyLevel = 2;
-                GS.Parachutes = 1;
-            } else if (NewGameBack.GetComponent<ButtonScript>().IsSelected == true && Input.GetMouseButtonDown(0)) {
-                CurrentWindow = "Play";
-            }
-
-        } else if (CurrentWindow == "NewGameInfo") {
-
-            if (NGWchicPage == 1) {
-                NGInfoText.GetComponent<Text>().text = GS.SetText(
-                    "Quick Tutorial:\nYour objective is to deliver presents to the marked houses. The position of the houses are random, and they are scattered all around the map. A house is marked with a green dot, which has a text below it, that says how far from it you are. In order to deliver a present to a house, you need to get close enough to the house (if the dot turns into rectangle, it means you can reach it), then you aim and fire your present cannon at it (SPACE on default). Once all presents have been delivered, portal will appear near you, through which you leave the level.",
-                    "Szybki Poradnik:\nTwoim zadaniem jest dostarczenie prezentów do wyznaczonych domów. Pozycja ów domów jest losowa, i są rozsiane po całej mapie. Domy są zaznaczone zieloną kropką, która ma tekst pod sobą, na którym napisany jest dystans pomiędzy tobą a domem. Aby dostarczyć prezent, musisz podlecieć wystarczająco blisko (jeśli kropka zamieni się w kwadrat, jesteś wystarczająco blisko), po czym musisz wycelować, i wystrzelić prezent ze swojej wyrzutni prezentów (SPACJA). Po dostarczeniu wszystkich prezentów, pojawi się portal, przez który opuszczasz poziom.");
-                NGBegin.GetComponent<Text>().text = GS.SetText("Next", "Dalej");
-            } else if (NGWchicPage == 2) {
-                NGInfoText.GetComponent<Text>().text = GS.SetText(
-                    "Quick Tutorial:\nYou control your airplane with mouse and keyboard. Moving your mouse vertically, turns your airplane up and down, while moving mouse horizontally, makes your airplane roll left and right. You can change your speed, by changing throttle, with W and S buttons. In order to turn your aircraft left and right (turn, not roll), you need to hold A or D button. You also have a gun, present cannon, and a special. To fire your gun, you need to hold LMB, and need to have more than 0 ammo. Press SPACE to fire your present cannon (you have infinite amount of presents), and (if you have any) press Q to use your special.",
-                    "Szybki Poradnik:\nSwój samolot kontrolujesz myszką i klawiaturą. Wertykalny ruch myszki, obraca twój samolot w góre i w dół, natomiast horyzontalny, kręci twoim samolotem w lewo i w prawo. Swoją prędkość możesz zmienić za pomocą klawiszy W i S. Aby obrócić swój samolot w lewo i prawo (obrócić, nie kręcić), musisz przytrzymać klawisz A, albo D. W samolocie posiadasz broń, wyrzutnie prezentów, i ekwipunek specjalny. Aby użyć broni, musisz mieć amunicję, i musisz przytrzymać LPM. Wyrzutnia prezentów ma nielimitowaną amunicję, i używasz ją za pomocą SPACJI. Ekwipunek specjalny (jeśli masz jakiś), używaż za pomocą Q.");
-                NGBegin.GetComponent<Text>().text = GS.SetText("Next", "Dalej");
-            } else if (NGWchicPage == 3) {
-                NGInfoText.GetComponent<Text>().text = GS.SetText(
-                    "Quick Tutorial:\nAfter you complete a level, you get sent back to menu, where you can: upgrade your plane, save your progress, read new messages, and start another level. We'll see how many levels you can complete before you die. Oh, about that, death is pernament. You have a few parachutes, if you crash, you lose one parachute, if you crash without having any parachutes, you start from begining.\n\nThat's all, good luck!",
-                    "Szybki Poradnik:\nPo przejściu poziomu, zostajesz odsyłany do menu, gdzie możesz: ulepszyć swój samolot, zapisać postęp, przeczytać nowe wiadomości, i rozpocząć nowy poziom. Zobaczymy ile poziomów uda ci się zaliczyć przed śmiercią. O, a co do tego, śmierć jest pernamenta. Masz kilka spadochronów, jeśli się rozbijesz, tracisz jeden spadochron, jeśli się rozbijesz nie mając żadnego spadochronu, zaczynasz od początku.\n\nTo wszystko, powodzenia!");
-                NGBegin.GetComponent<Text>().text = GS.SetText("Begin", "Rozpocznij");
-            }
-
-            if (NGBegin.GetComponent<ButtonScript>().IsSelected == true && Input.GetMouseButtonDown(0)) {
-                if (NGWchicPage == 3) {
-                    WindowToLoad = "MainGame";
-                    TimeUntilLoad = Random.Range(1f, 3f);
-                } else {
-                    NGWchicPage += 1;
-                }
-            }
-
-        } else if (CurrentWindow == "CampaignMain") {
-
-            CMPlayButton.GetComponent<Text>().text = GS.SetText("Play (Level " + GS.Level + ")", "Graj (Poziom " + GS.Level + ")");
-            CMCustomizeButton.GetComponent<Text>().text = GS.SetText("Customize", "Edytuj Samolot");
-            CMQuitButton.GetComponent<Text>().text = GS.SetText("Save'n'Quit", "Zapisz i Wyjdź");
-            CMInfo.text = GS.SetText("Score: " + GS.CurrentScore + "\nMooney: " + GS.Mooney, "Wynik: " + GS.CurrentScore + "\nPiniądze: " + GS.Mooney);
-            if (GS.Parachutes > 0){
-                CMPText.text = GS.Parachutes.ToString();
-                CMPText.color = new Color32(255, 255, 255, 255);
-                CMPImage.color = new Color32(255, 255, 255, 255);
-            } else {
-                CMPText.text = GS.Parachutes.ToString();
-                CMPText.color = new Color32(255, 0, 0, 255);
-                CMPImage.color = new Color32(255, 0, 0, 255);
-            }
-
-            if (MessageText.text != "") CMMessageButton.SetActive(true);
-            else CMMessageButton.SetActive(false);
-
-			if(Input.GetMouseButtonDown(0)){
-	            if (CMPlayButton.GetComponent<ButtonScript>().IsSelected == true) {
-    	            WindowToLoad = "MainGame";
-        	        TimeUntilLoad = Random.Range(1f, 3f);
-            	} else if (CMCustomizeButton.GetComponent<ButtonScript>().IsSelected == true) {
-                	CurrentWindow = "CampaignCustomization";
-	            }else if (CMMessageButton.GetComponent<ButtonScript>().IsSelected == true) {
-    	            CurrentWindow = "CampaignMessage";
-        	    } else if (CMQuitButton.GetComponent<ButtonScript>().IsSelected == true) {
-            	    CurrentWindow = "Main";
-                	GS.SetGameOptions("Save", "TEST");
-            	}
+		if(WhichOne != ""){
+			PrologueWindow.position = AnchorUp.transform.position;
+			string[] CutsceneVars = new string[]{"Music", "Window", "Text"};
+			float[] CutsceneBlack = new float[]{20f, 1f, 0f};
+			switch(WhichOne){
+				case "Prologue": CutsceneVars = new string[]{
+					"Prologue",
+					"Start",
+					GS.SetText(
+			            "Let me tell you a Christmas story:\n\n It is year 1940. It has been about a year, since the German invasion of Poland, and the following beginning of the Second World War. The German forces have been continuing to fight and invade other countries ever since, and it doesn't look like it's going to end anytime soon. Although Germany's occupying almost the entirety of europe, the fight is still present everywhere: on the land, on the sea, and in the sky. It is now December 25th, and Christmas broke out. It is a time, when Santa Claus is flying in his sleigh, and is delivering presents to the kind children. But since there is a grand conflict going on, he cannot be flying in his sleigh, because that's too dangerous! For that reason, he has replaced his sleigh and his reindeers, with a modern, heavily armed, military-class airplane. Now, he'll deliver the presents without getting stopped, and if any nazi scum will try to ruin the christmas spirit, that scum shall bite the dust! Or maybe Santa Claus will be the one who's gonna be taken down? Find it out, in...",
+        			    "Pozwól że opowiem ci świąteczną opowieść:\n\n Jest rok 1940. Minął rok od Niemieckiej inwazji na Polskę, oraz rozpoczęcia drugiej wojny światowej. Siły niemieckie dalej kontynuują inwazję na nie swoje ziemie, i wydawać by się mogło, że taki stan rzeczy prędko się nie zmieni. Pomimo tego, iż Niemcy okupują już prawie całą europę, walka dalej jest kontynuowana: na ziemi, na wodzie, i w powietrzu. Nadszedł jednak 25'ego grudnia, a wraz z nim, Święta Bożego Narodzenia. Jest to czas, w którym Święty Mikołaj lata na swych saniach, i rozdaje prezenty grzecznym dziecią. Jednak, ze względu na wielki konflikt zbrojeniowy, nie może latać on w swych saniach, gdyż to jest niebiezpieczne! Z tego powodu, zastąpił on swoje sanie i renifery, świetnie uzbrojonym samolotem klasy wojskowej. Teraz, może w spokoju porozdawać dziecią ich prezenty, a jeśli jakiś szkop zechce zrujnować świąteczny nastrój, będzie on gryzł piach! A może to jednak Święty Mikołaj będzie tym, którego zestrzelą? Zaraz się tego dowiemy, w...")}; 
+					PrologueText.alignment = TextAnchor.UpperCenter;
+					break;
+				case "Credits": CutsceneVars = new string[]{
+					"",
+					"Main",
+					GS.SetText (
+				"Credits\n\n\nGame created by:\nGMPguy\n\nTools used:\nUnity\nBlender\nPaint 3D\nAudacity\n\nMusic used:\n\"Almost New\" \"Take a Chance\" \"The Reveal\" \"The Descent\" \"Dream Culture\" \"Five Armies\" \"Chase\"\n Kevin MacLeod (incompetech.com) Licensed under Creative Commons: By Attribution 3.0 License http://creativecommons.org/licenses/by/3.0/\n\n\nCreated for Game Off 2018", 
+				"Lista Płac\n\n\nGra zrobiona przez:\nGMPguy\n\nUżyte narzędzia:\nUnity\nBlender\nPaint 3D\n\nUżyta muzyka:\n\"Almost New\" \"Take a Chance\" \"The Reveal\" \"The Descent\" \"Dream Culture\" \"Five Armies\" \"Chase\"\n Kevin MacLeod (incompetech.com) Licensed under Creative Commons: By Attribution 3.0 License http://creativecommons.org/licenses/by/3.0/\n\n\nGra stworzona na Game Off 2018")}; 
+					CutsceneBlack = new float[]{10f, 0f, 1f};
+					PrologueText.alignment = TextAnchor.UpperLeft;
+					break;
 			}
 
-        } else if (CurrentWindow == "CampaignMessage"){
+			if (CutsceneVars[0] != "" && CurrentMusic != CutsceneVars[0]) {
+    	        PlayMusic(CutsceneVars[0]);
+        	}
 
-            CloseMessage.GetComponent<Text>().text = GS.SetText("Close", "Zamknij");
+	        PrologueBlackImage.color = new Color(0f,0f,0f, Mathf.Lerp(CutsceneBlack[1], CutsceneBlack[2], WindowLoaded/CutsceneBlack[0] * 2f));
+    	    PrologueText.transform.position = Vector3.Lerp(AnchorDown.transform.position, AnchorUp.transform.position, WindowLoaded/CutsceneBlack[0]);
+        	PrologueText.text = CutsceneVars[2];
+	        if (Input.anyKeyDown) {
+				if(WindowLoaded < CutsceneBlack[0]) WindowLoaded = CutsceneBlack[0];
+        	    else CurrentWindow[0] = CutsceneVars[1];
+        	}
+		} else {
+			PrologueWindow.position = AnchorDown.transform.position;
+		}
+	}
 
-            if (MessageText.text == "") {
-                CurrentWindow = "CampaignMain";
-            }
+	void Bootup(bool show = false){
 
-            if (CloseMessage.GetComponent<ButtonScript>().IsSelected == true && Input.GetMouseButtonDown(0)){
-                GS.HasDied = false;
-                CurrentWindow = "CampaignMain";
-            }
+		if(show){
+			StartWindow.position = AnchorUp.transform.position;
+			StartWindow.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, WindowLoaded);
+    	    MainCamera.transform.position = Vector3.Lerp(MainCamera.transform.position, GameObject.Find("StartCamera").transform.position, 0.1f * (Time.deltaTime * 100f));
+	        MainCamera.transform.rotation = Quaternion.Lerp(MainCamera.transform.rotation, GameObject.Find("StartCamera").transform.rotation, 0.1f * (Time.deltaTime * 100f));
+    	    if ((Input.anyKeyDown && WindowLoaded > 1f) || WindowLoaded > 5f) {
+        	    CurrentWindow[0] = "Main";
+	        }
+		} else {
+			StartWindow.localScale = Vector3.Lerp(Vector3.one, Vector3.one*2f, WindowLoaded);
+			StartWindow.position = AnchorDown.transform.position;
+		}
 
-        } else if (CurrentWindow == "CampaignCustomization") {
-			
-			CustomizationBack.GetComponent<Text> ().text = GS.SetText ("Back", "Wróć");
-			CCInfo.text = GS.SetText ("Score: " + GS.CurrentScore + "\nMooney: " + GS.Mooney, "Wynik: " + GS.CurrentScore + "\nPiniądze: " + GS.Mooney);
-            if (GS.Parachutes > 0) {
-                CCPText.text = GS.Parachutes.ToString();
-                CCPText.color = new Color32(255, 255, 255, 255);
-                CCPImage.color = new Color32(255, 255, 255, 255);
-            } else {
-                CCPText.text = GS.Parachutes.ToString();
-                CCPText.color = new Color32(255, 0, 0, 255);
-                CCPImage.color = new Color32(255, 0, 0, 255);
-            }
+	}
 
-            CampaignCustomization ();
+	void Main(string WhichMain = ""){
 
-			if (CustomizationBack.GetComponent<ButtonScript> ().IsSelected == true && Input.GetMouseButtonDown (0)) {
-				if (currentCustomizationOption == "") {
-					CurrentWindow = "CampaignMain";
-				} else {
-					currentCustomizationOption = "";
+		if(WhichMain != ""){
+			MainWindow.position = AnchorUp.transform.position;
+
+			if(WindowLoaded < 2f){
+				for(int ba = 0; ba < 6; ba++){
+					MainButtonTextes[ba].color = new Color(1f,1f,1f, (WindowLoaded*6f) - (ba/6f));
 				}
 			}
 
-			if (EraseOptionInfo > 0f) {
-				EraseOptionInfo -= 1f;
+			string[] mainInfos = new string[]{"000000", "","","","","",""};
+			switch(WhichMain){
+				case "Main": 
+					if(GS.Build == "Web") mainInfos = new string[]{"111101", "Play", "Scores", "Options", "Credits", "", "Quit"};
+					else mainInfos = new string[]{"011110", "", "Play", "Scores", "Options", "Credits", ""};
+					break;
+				case "Play":
+					mainInfos = new string[]{"111101", "SF", "SF", "SF", "SF", "", "Main"};
+					break;
+				case "Quit":
+					mainInfos = new string[]{"000110", "", "QuitUnsure", "", "QuitYes", "QuitNo", ""};
+					break;
+				case "File":
+					mainInfos = new string[]{"001110", "SelectedFile", "", "SFload", "SFerase", "SFback", ""};
+					break;
+			}
+
+			if(WhichMain == "Options"){
+				if(GS.OptionsChoice == "-1"){
+					CurrentWindow[0] = "Main";
+					GS.OptionsChoice = "";
+				}
+				GS.OptionsButtons(MainButtons, MainButtons[5]);
+				MainButtons[4].IsActive = false; MainButtonTextes[4].text = "";
 			} else {
-				OptionInfoName.text = "";
-				OptionInfoDescription.text = "";
+				string fileNameA = "SF" + SelectedFile + "-" + GS.Version + "-" + GS.Build;
+				for(int mb = 0; mb < 6; mb++){
+					if(mainInfos[0][mb] == '0') MainButtons[mb].IsActive = false;
+					else if(mainInfos[0][mb] == '1') MainButtons[mb].IsActive = true;
+
+					int Click = 0; if(MainButtons[mb].IsSelected && Input.GetMouseButtonDown(0)) Click = 1;
+					switch(mainInfos[mb+1]){
+						case "Play": MainButtonTextes[mb].text = GS.SetText("Play", "Graj");
+							if(Click == 1) CurrentWindow[0] = mainInfos[mb+1]; break;
+						case "Scores": MainButtonTextes[mb].text = GS.SetText("Scores", "Wyniki");
+							if(Click == 1) CurrentWindow[0] = mainInfos[mb+1]; break;
+						case "Options": MainButtonTextes[mb].text = GS.SetText("Options", "Opcje");
+							if(Click == 1) CurrentWindow[0] = mainInfos[mb+1]; break;
+						case "Credits": MainButtonTextes[mb].text = GS.SetText("Credits", "Lista płac");
+							if(Click == 1) CurrentWindow[0] = mainInfos[mb+1]; break;
+						case "Quit": MainButtonTextes[mb].text = GS.SetText("Quit", "Wyjdź");
+							if(Click == 1) CurrentWindow[0] = mainInfos[mb+1]; break;
+						case "Main": MainButtonTextes[mb].text = GS.SetText("Go back", "Wróć");
+							if(Click == 1) CurrentWindow[0] = mainInfos[mb+1]; break;
+
+						case "SF":
+							string fileName = "SF" + mb + "-" + GS.Version + "-" + GS.Build;
+							string[] Modes = new string[]{GS.SetText("Campaign", "Kampania"), GS.SetText("Endless", "Tryb bez końca"), GS.SetText("Skirmishes", "Tryb potyczek")};
+							if(PlayerPrefs.HasKey(fileName + "SavedGame")){
+								MainButtonTextes[mb].text = PlayerPrefs.GetString(fileName + "Name") + " - " + Modes[PlayerPrefs.GetInt(fileName + "Mode")] + " - " + PlayerPrefs.GetInt(fileName + "Level") + GS.SetText(" Level", " Poziom");
+								if(Click == 1) {
+									SelectedFile = mb;
+									CurrentWindow[0] = "File";
+								}
+							} else {
+								MainButtonTextes[mb].text = GS.SetText("~ EMPTY FILE ~", "~ PUSTY ZAPIS ~");
+								if(Click == 1) {
+									SelectedFile = mb;
+									CurrentWindow[0] = "NewGame";
+								}
+							}
+							break;
+
+						case "QuitUnsure": 
+							MainButtonTextes[mb].text = GS.SetText("Are you sure, you want to quit?", "Napewno chcesz wyjść?"); break;
+						case "QuitYes": MainButtonTextes[mb].text = GS.SetText("Yes", "Tak");
+							if(Click == 1) Application.Quit(); break;
+						case "QuitNo": MainButtonTextes[mb].text = GS.SetText("No", "Nie");
+							if(Click == 1) CurrentWindow[0] = "Main"; break;
+						
+						case "SelectedFile": 
+							MainButtonTextes[mb].text = GS.SetText("Selected save file: ", "Wybrano zapis: ") + PlayerPrefs.GetString(fileNameA + "Name"); break;
+						case "SFload": MainButtonTextes[mb].text = GS.SetText("Load", "Wczytaj");
+							if(Click == 1) {
+								GS.SetGameOptions("Load", "SF" + SelectedFile);
+								CurrentWindow[0] = "CampaignMain";
+							} break;
+						case "SFerase": MainButtonTextes[mb].text = GS.SetText("Overwrite with a new game", "Nadpisz nową grą");
+							if(Click == 1) CurrentWindow[0] = "NewGame"; break;
+						case "SFback": MainButtonTextes[mb].text = GS.SetText("Go back", "Wróć");
+							if(Click == 1) CurrentWindow[0] = "Play"; break;
+
+						default:
+							MainButtonTextes[mb].text = "";
+							break;
+					}
+				}
 			}
 
-		} else if (CurrentWindow == "Options") {
+		} else {
+			MainWindow.position = AnchorDown.transform.position;
+		}
 
-			GS.OptionsButtons(OptionButtons, OptionsBack);
-			if(GS.OptionsChoice == "-1"){
-				GS.OptionsChoice = "";
-				CurrentWindow = "Main";
+	}
+
+	void NewGame(bool show = false){
+		if(show){
+			NewGameWindow.position = Vector3.Lerp(AnchorDown.transform.position, AnchorUp.transform.position, WindowLoaded*3f);
+			string[] ButtonTypes = new string[]{"110011", "Mode", "Diff", "", "", "Begin", "Cancel"};
+
+			for(int bt = 0; bt < 6; bt++){
+				ButtonScript btButton = NGbuttons[bt].GetComponent<ButtonScript>();
+				Text btText = NGbuttons[bt].GetComponent<Text>();
+
+				if(ButtonTypes[0][bt] == '0') btButton.IsActive = false;
+				else btButton.IsActive = true;
+
+				int Click = 0; if(btButton.IsSelected && Input.GetMouseButtonDown(0)) Click = 1; else if(btButton.IsSelected && Input.GetMouseButtonDown(1)) Click = -1;
+				switch(ButtonTypes[bt+1]){
+					case "Mode":
+						string[] ModeNames = {GS.SetText("Campaign", "Kampania"), GS.SetText("Endless", "Tryb bez końca"), GS.SetText("Skirmishes", "Tryb potyczek")};
+						btText.text = GS.SetText("Game mode: ", "Tryb gry: ") + ModeNames[NGchosenMode];
+						if(Click != 0) NGchosenMode = (3+NGchosenMode+Click) % 3;
+						break;
+					case "Diff":
+						string[] DiffNames = {GS.SetText("Easy", "Łatwy"), GS.SetText("Normal", "Normalny"), GS.SetText("Hard", "Trudny"), GS.SetText("HARDCORE", "HARDKOROWY")};
+						btText.text = GS.SetText("Difficulty level: ", "Poziom trudności: ") + DiffNames[NGchosenDiff];
+						if(Click != 0) NGchosenDiff = (4+NGchosenDiff+Click) % 4;
+						break;
+					case "Begin":
+						if(PlayerPrefs.HasKey("SF" + SelectedFile + "-" + GS.Version + "-" + GS.Build + "SavedGame")) btText.text = GS.SetText("Overwrite and begin", "Nadpisz i rozpocznij");
+						else btText.text = GS.SetText("Begin", "Rozpocznij");
+						if(Click != 0) {
+							int[] SetCampLives = new int[]{999999, 999999, 10, 3};
+							int[] SetLives = new int[]{5, 3, 1, 0};
+							GS.saveIndex = SelectedFile;
+							GS.SetGameOptions("Empty", "SF" + SelectedFile + "-" + GS.Version + "-" + GS.Build);
+							if(NGinput.text == "") GS.Name = GS.SetText("Player - ", "Gracz - ") + Random.Range(1000, 9999).ToString();
+							else GS.Name = NGinput.text;
+							GS.GameMode = NGchosenMode;
+							GS.Difficulty = NGchosenDiff;
+							if(NGchosenMode == 0) GS.Parachutes = SetCampLives[NGchosenDiff];
+							else GS.Parachutes = SetLives[NGchosenDiff];
+							TimeUntilLoad = 5f;
+							WindowToLoad = "MainGame";
+						}
+						break;
+					case "Cancel":
+						btText.text = GS.SetText("Cancel", "Anuluj");
+						if(Click != 0) CurrentWindow[0] = "Play";
+						break;
+					default: btText.text = ""; break;
+				}
+			}
+		} else if (CurrentWindow[2] == "NewGame") {
+			NewGameWindow.position = Vector3.Lerp(AnchorUp.transform.position, AnchorDown.transform.position, WindowLoaded*3f);
+		} else {
+			NewGameWindow.position = AnchorDown.transform.position;
+		}
+	}
+
+	void Scores(bool show = false){
+		if(show){
+			ScoresWindow.position = Vector3.Lerp(AnchorDown.transform.position, AnchorUp.transform.position, WindowLoaded*3f);
+
+			// Buttons
+			string[] buttonVars = {"111101", "Sort", "Mode", "Diff", "Erase", "", "Cancel"};
+			if(scoreMain == "Erase") buttonVars = new string[]{"100011", "EraseUnsure", "", "", "", "EraseYes", "EraseNo"};
+			for(int sb = 0; sb < 6; sb++){
+				if(buttonVars[0][sb] == '1') ScoreButtons[sb].IsActive = true;
+				else ScoreButtons[sb].IsActive = false;
+
+				int Click = 0; if (ScoreButtons[sb].IsSelected && Input.GetMouseButtonDown(0)) Click = 1; else if (ScoreButtons[sb].IsSelected && Input.GetMouseButtonDown(1)) Click = -1;
+
+				switch(buttonVars[sb+1]){
+					case "Sort":
+						string[] sortText = {GS.SetText("Best", "Od najlepszych"), GS.SetText("Worst", "Od najgorszych"), GS.SetText("Newest", "Od najnowszych"), GS.SetText("Oldest", "Od najstarszych")};
+						sSorting = (3 + sSorting + Click) % 3;
+						ScoreButtonTextes[sb].text = GS.SetText("Sort: ", "Sortuj: ") + sortText[sSorting];
+						break;
+					case "Mode":
+						string[] modeText = {GS.SetText("Any", "Wszystkie"), GS.SetText("Campaign", "Kampania"), GS.SetText("Endless", "Tryb bez końca"), GS.SetText("Skirmishes", "Tryb potyczek")};
+						sMode = (4 + sMode + Click) % 4;
+						ScoreButtonTextes[sb].text = GS.SetText("Modes: ", "Tryb: ") + modeText[sMode];
+						break;
+					case "Diff":
+						string[] diffText = {GS.SetText("Any", "Wszystkie"), GS.SetText("Easy", "Łatwy"), GS.SetText("Normal", "Normalny"), GS.SetText("Hard", "Trudny"), GS.SetText("Hardcore", "Hardkorowy")};
+						sDiff = (5 + sDiff + Click) % 5;
+						ScoreButtonTextes[sb].text = GS.SetText("Difficulty: ", "Poziom trudności: ") + diffText[sDiff];
+						break;
+					case "Erase":
+						ScoreButtonTextes[sb].text = GS.SetText("Erase all entries", "Usuń wszystkie wpisy");
+						if(Click != 0) scoreMain = "Erase";
+						break;
+					case "Cancel":
+						ScoreButtonTextes[sb].text = GS.SetText("Go back", "Wróć");
+						if(Click != 0) CurrentWindow[0] = "Main";
+						break;
+
+					case "EraseUnsure":
+						ScoreButtonTextes[sb].text = GS.SetText("You sure?", "Jesteś pewien?");
+						break;
+					case "EraseYes":
+						ScoreButtonTextes[sb].text = GS.SetText("Yes", "Tak");
+						if(Click != 0) {
+							GS.SaveScore("Wipe");
+							scoreMain = "";
+						}
+						break;
+					case "EraseNo":
+						ScoreButtonTextes[sb].text = GS.SetText("No", "Nie");
+						if(Click != 0) scoreMain = "";
+						break;
+					default: ScoreButtonTextes[sb].text = ""; break;
+				}
 			}
 
-		} else if (CurrentWindow == "Credits") {
-
-			Credits.text = GS.SetText (
-				"Credits\n\n\nGame created by:\nGMPguy\n\nTools used:\nUnity\nBlender\nPaint 3D\nAudacity\n\nMusic used:\n\"Almost New\" \"Take a Chance\" \"The Reveal\" \"The Descent\" \"Dream Culture\" \"Five Armies\" \"Chase\"\n Kevin MacLeod (incompetech.com) Licensed under Creative Commons: By Attribution 3.0 License http://creativecommons.org/licenses/by/3.0/\n\n\nCreated for Game Off 2018", 
-				"Lista Płac\n\n\nGra zrobiona przez:\nGMPguy\n\nUżyte narzędzia:\nUnity\nBlender\nPaint 3D\n\nUżyta muzyka:\n\"Almost New\" \"Take a Chance\" \"The Reveal\" \"The Descent\" \"Dream Culture\" \"Five Armies\" \"Chase\"\n Kevin MacLeod (incompetech.com) Licensed under Creative Commons: By Attribution 3.0 License http://creativecommons.org/licenses/by/3.0/\n\n\nGra stworzona na Game Off 2018");
-			CreditsBack.GetComponent<Text> ().text = GS.SetText ("Back", "Wróć");
-
-			if (CreditsBack.GetComponent<ButtonScript> ().IsSelected == true && Input.GetMouseButtonDown (0)) {
-				CurrentWindow = "Main";
+			// Scores display
+			if(prevScore != GS.displayedHS + sSorting + sMode + sDiff){
+				GS.SaveScore("Sort", new[]{sSorting});
+				GS.SaveScore("Display", new[]{sMode, sDiff});
+				prevScore = GS.displayedHS + sSorting + sMode + sDiff;
+				sScores.text = "";
+				if(WindowLoaded > 1f) WindowLoaded = 1f;
+			} else {
+				if(GS.displayedHS != "") sScores.text = GS.displayedHS[..(int)Mathf.Clamp((WindowLoaded-1f) * 100f, 0, GS.displayedHS.Length-1)];
+				else sScores.text = GS.SetText("No entries found...", "Nie znaleziono żadnych wpisów...");
 			}
 
-		} else if (CurrentWindow == "GameOver") {
+		} else if (CurrentWindow[2] == "Scores") {
+			ScoresWindow.position = Vector3.Lerp(AnchorUp.transform.position, AnchorDown.transform.position, WindowLoaded*3f);
+		} else {
+			ScoresWindow.position = AnchorDown.transform.position;
+			prevScore = "";
+		}
+	}
+
+	void Projector(bool enable = false, string WhichOne = ""){
+
+	}
+
+	void Campaign(string Specific = ""){
+
+		switch(Specific){
+
+			case "CampaignMain":
+				CMainWidnow.position = AnchorUp.transform.position;
+				CCustomWindow.position = CMessWindow.position = AnchorDown.transform.position;
+
+				CMPlayButton.GetComponent<Text>().text = GS.SetText("Play (Level " + GS.Level + ")", "Graj (Poziom " + GS.Level + ")");
+	            CMCustomizeButton.GetComponent<Text>().text = GS.SetText("Customize", "Edytuj Samolot");
+    	        CMQuitButton.GetComponent<Text>().text = GS.SetText("Save'n'Quit", "Zapisz i Wyjdź");
+        	    CMInfo.text = GS.SetText("Score: " + GS.CurrentScore + "\nMooney: " + GS.Mooney, "Wynik: " + GS.CurrentScore + "\nPiniądze: " + GS.Mooney);
+            	if (GS.Parachutes > 0){
+                	CMPText.text = GS.Parachutes.ToString();
+	                CMPText.color = new Color32(255, 255, 255, 255);
+    	            CMPImage.color = new Color32(255, 255, 255, 255);
+        	    } else {
+            	    CMPText.text = GS.Parachutes.ToString();
+                	CMPText.color = new Color32(255, 0, 0, 255);
+	                CMPImage.color = new Color32(255, 0, 0, 255);
+    	        }
+
+        	    if (MessageText.text != "") CMMessageButton.SetActive(true);
+            	else CMMessageButton.SetActive(false);
+
+				if(Input.GetMouseButtonDown(0)){
+		            if (CMPlayButton.GetComponent<ButtonScript>().IsSelected == true) {
+    		            WindowToLoad = "MainGame";
+        		        TimeUntilLoad = Random.Range(1f, 3f);
+            		} else if (CMCustomizeButton.GetComponent<ButtonScript>().IsSelected == true) {
+                		CurrentWindow[0] = "CampaignCustomization";
+		            } else if (CMMessageButton.GetComponent<ButtonScript>().IsSelected == true) {
+    		            CurrentWindow[0] = "CampaignMessage";
+        		    } else if (CMQuitButton.GetComponent<ButtonScript>().IsSelected == true) {
+            		    CurrentWindow[0] = "Main";
+                		GS.SetGameOptions("Save", "SF" + GS.saveIndex);
+            		}
+				}
+				break;
+
+			case "CampaignMessage":
+				CMessWindow.position = AnchorUp.transform.position;
+				CCustomWindow.position = CMainWidnow.position = AnchorDown.transform.position;
+				CloseMessage.GetComponent<Text>().text = GS.SetText("Close", "Zamknij");
+
+	            if (MessageText.text == "") CurrentWindow[0] = "CampaignMain";
+
+            	if (CloseMessage.GetComponent<ButtonScript>().IsSelected == true && Input.GetMouseButtonDown(0)){
+	                GS.HasDied = false;
+    	            CurrentWindow[0] = "CampaignMain";
+        	    }
+				break;
+
+			case "CampaignCustomization":
+				CCustomWindow.position = AnchorUp.transform.position;
+				CMessWindow.position = CMessWindow.position = AnchorDown.transform.position;
+				CustomizationBack.GetComponent<Text> ().text = GS.SetText ("Back", "Wróć");
+				CCInfo.text = GS.SetText ("Score: " + GS.CurrentScore + "\nMooney: " + GS.Mooney, "Wynik: " + GS.CurrentScore + "\nPiniądze: " + GS.Mooney);
+    	        if (GS.Parachutes > 0) {
+        	        CCPText.text = GS.Parachutes.ToString();
+            	    CCPText.color = new Color32(255, 255, 255, 255);
+                	CCPImage.color = new Color32(255, 255, 255, 255);
+	            } else {
+    	            CCPText.text = GS.Parachutes.ToString();
+        	        CCPText.color = new Color32(255, 0, 0, 255);
+            	    CCPImage.color = new Color32(255, 0, 0, 255);
+            	}
+
+	            CampaignCustomization ();
+
+				if (CustomizationBack.GetComponent<ButtonScript> ().IsSelected == true && Input.GetMouseButtonDown (0)) {
+					if (currentCustomizationOption == "") {
+						CurrentWindow[0] = "CampaignMain";
+					} else {
+						currentCustomizationOption = "";
+					}
+				}
+
+				if (EraseOptionInfo > 0f) {
+					EraseOptionInfo -= 1f;
+				} else {
+					OptionInfoName.text = "";
+					OptionInfoDescription.text = "";
+				}
+				break;
+
+			default:
+				if(CurrentWindow[1] == "CampaignMain" || CurrentWindow[1] == "CampaignCustomization" || CurrentWindow[1] == "CampaignMessage"){
+					CMainWidnow.position = Vector3.Lerp(CMainWidnow.position, AnchorDown.transform.position, WindowLoaded/4f);
+					CMessWindow.position = Vector3.Lerp(CMessWindow.position, AnchorDown.transform.position, WindowLoaded/4f);
+					CCustomWindow.position = Vector3.Lerp(CCustomWindow.position, AnchorDown.transform.position, WindowLoaded/4f);
+				} else {
+					CMainWidnow.position = CMessWindow.position = CCustomWindow.position = AnchorDown.transform.position;
+				}
+				break;
+
+		}
+
+	}
+
+	void GameOver(string overType = ""){
+		if(overType == "GameOver"){
+			GameOverWindow.position = AnchorUp.transform.position;
 
 			if(CurrentMusic != "GameOver"){
 				PlayMusic ("GameOver");
@@ -464,14 +638,142 @@ public class MenuScript : MonoBehaviour {
 			}
 
 			if(Input.GetKeyDown(KeyCode.Escape)){
-				CurrentWindow = "Start";
+				CurrentWindow[0] = "Start";
 			}
 
+		} else {
+			GameOverWindow.position = AnchorDown.transform.position;
 		}
-		// Windows actions
+	}
+
+	void Update () {
+
+        SettingMessage();
+
+		if(CurrentWindow[1] != CurrentWindow[0]){
+			CurrentWindow[2] = CurrentWindow[1];
+			CurrentWindow[1] = CurrentWindow[0];
+			WindowLoaded = 0f;
+		} else {
+			WindowLoaded += Time.unscaledDeltaTime;
+		}
+
+		if(Loading > 0f){
+			WhileLoading(true);
+			Cutscene();
+			Bootup();
+			Main();
+			NewGame();
+			Scores();
+			Projector();
+			GameOver();
+			Campaign();
+		} else {
+			switch(CurrentWindow[0]){
+				case "Projector":
+					WhileLoading();
+					Cutscene();
+					Bootup();
+					Main();
+					NewGame();
+					Scores();
+					Projector(true, CurrentWindow[0]);
+					GameOver();
+					Campaign();
+					break;
+				case "Scores":
+					WhileLoading();
+					Cutscene();
+					Bootup();
+					Main();
+					NewGame();
+					Scores(true);
+					Projector();
+					GameOver();
+					Campaign();
+					break;
+				case "NewGame":
+					WhileLoading();
+					Cutscene();
+					Bootup();
+					Main();
+					NewGame(true);
+					Scores();
+					Projector();
+					GameOver();
+					Campaign();
+					break;
+				case "Main": case "Play": case "Options": case "File": case "Quit":
+					WhileLoading();
+					Cutscene();
+					Bootup();
+					Main(CurrentWindow[0]);
+					NewGame();
+					Scores();
+					Projector();
+					GameOver();
+					Campaign();
+					break;
+				case "Prologue": case "Credits":
+					WhileLoading();
+					Cutscene(CurrentWindow[0]);
+					Bootup();
+					Main();
+					NewGame();
+					Scores();
+					Projector();
+					GameOver();
+					Campaign();
+					break;
+				case "Start":
+					WhileLoading();
+					Cutscene();
+					Bootup(true);
+					Main();
+					NewGame();
+					Scores();
+					Projector();
+					GameOver();
+					Campaign();
+					break;
+				case "GameOver": case "TheEnd":
+					WhileLoading();
+					Cutscene();
+					Bootup();
+					Main();
+					NewGame();
+					Scores();
+					Projector();
+					GameOver(CurrentWindow[0]);
+					Campaign();
+					break;
+				case "CampaignMain": case "CampaignMessage": case "CampaignCustomization":
+					WhileLoading();
+					Cutscene();
+					Bootup();
+					Main();
+					NewGame();
+					Scores();
+					Projector();
+					GameOver();
+					Campaign(CurrentWindow[0]);
+					break;
+				default:
+					WhileLoading();
+					Cutscene();
+					Bootup();
+					Main();
+					NewGame();
+					Scores();
+					Projector();
+					GameOver();
+					Campaign();
+					break;
+			}
+		}
 
 		// Main Menu Plane
-		if(CurrentWindow == "Start" || CurrentWindow == "Main" || CurrentWindow == "Options" || CurrentWindow == "NewGame" || CurrentWindow == "Play" || CurrentWindow == "NewGameInfo" || CurrentWindow == "Credits"){
+		if(CurrentWindow[0] == "Start" || CurrentWindow[0] == "Main" || CurrentWindow[0] == "Options" || CurrentWindow[0] == "NewGame" || CurrentWindow[0] == "Play" || CurrentWindow[0] == "NewGameInfo" || CurrentWindow[0] == "Credits"){
 			
 			if(CurrentMusic != "Main"){
 				PlayMusic ("Main");
@@ -563,7 +865,7 @@ public class MenuScript : MonoBehaviour {
         } else if (CampaignCamRotation < 0f){
             CampaignCamRotation = 360f;
         }
-        if (CurrentWindow == "CampaignMain" || CurrentWindow == "CampaignCustomization" || CurrentWindow == "CampaignMessage") {
+        if (CurrentWindow[0] == "CampaignMain" || CurrentWindow[0] == "CampaignCustomization" || CurrentWindow[0] == "CampaignMessage") {
 
 			if(CurrentMusic != "Campaign" && Loading <= 0f){
 				PlayMusic ("Campaign");
@@ -621,7 +923,7 @@ public class MenuScript : MonoBehaviour {
 		if(WindowToLoad != ""){
 			if (TimeUntilLoad > 0f) {
 				Loading = 1f;
-				TimeUntilLoad -= 0.01f * (Time.fixedDeltaTime * 100f);
+				TimeUntilLoad -= Time.deltaTime;
 			} else {
 				GS.LoadLevel(WindowToLoad, "");
 			}
@@ -644,11 +946,11 @@ public class MenuScript : MonoBehaviour {
     void SettingMessage(){
 
         if (GS.HasDied == true) {
-            if (GS.Parachutes > 0) {
+            if (GS.Parachutes > 0 && GS.Parachutes < 1000) {
                 MessageText.text = GS.SetText(
                 "You have crashed. All of the score and mooney you have earned in this round, have been lost, and you also have to repeat this round. Fortunetaly, you still have " + GS.Parachutes + " parachutes left!",
                 "Rozbiłeś się. Twój wynik oraz piniądze zdobyte w tej rundzie, zostały utracone, i musisz powtórzyć tą rundę. Na szczęscie, jeszcze masz " + GS.Parachutes + " spadochron/y/ów!");
-            } else {
+            } else if (GS.Parachutes < 1000) {
                 MessageText.text = GS.SetText(
                 "You have crashed. All of the score and mooney you have earned in this round, have been lost, and you also have to repeat this round. You also don't have any parachutes left!\n\nIF YOU CRASH AGAIN, IT'S GAME OVER",
                 "Rozbiłeś się. Twój wynik oraz piniądze zdobyte w tej rundzie, zostały utracone, i musisz powtórzyć tą rundę. Warto wspomnieć, że nie masz już ani jednego spadochronu!\n\nJEŚLI ZNOWU SIĘ ROZBIJESZ, TO KONIEC GRY");

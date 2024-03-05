@@ -138,8 +138,8 @@ public class HomeScript : MonoBehaviour {
 			if(player != null){
 				GS.GainScore (100);
 				MainCanvas.Message(GS.SetText("Present Delivered!", "Prezent Dostarczony!"), Color.green, new float[]{4f, 2f});
-				MainCanvas.Flash(Color.green, new float[]{0.5f, 1f});
-				player.Health += Random.Range (player.MaxHealth / 4f, player.MaxHealth / 2f);
+				MainCanvas.Flash(Color.green, new float[]{0.5f, 1f}, 1);
+				player.Health = Mathf.Clamp(player.Health + Random.Range (player.MaxHealth / 4f, player.MaxHealth / 2f), 0f, player.MaxHealth);
 				player.Heat = 0f;
 				player.Fuel = player.MaxFuel;
 			}

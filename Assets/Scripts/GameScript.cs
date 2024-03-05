@@ -15,20 +15,32 @@ public class GameScript : MonoBehaviour {
 	public int currentResolution = -1;
 	public Vector2[] LoadedResolutions;
 	public string Language = "English";
-	public int HighScore = 0;
 	public float[] Volumes = new float[] { 1f, 1f, 1f, -1}; // master, music, sounds, prev sounds
 	public int ControlScheme = 0; // Mouse and Keyboard, Pointing
 	public bool InvertedMouse = false;
     public Color[] PrevLight = new Color[2];
 	int SwitchDesperate = 0;
+	public string OptionsChoice = "";
+	int selectedKB = 0;
+	int KBphase = 0;
+	KeyBind[] KeyBinds;
+	[System.Serializable] struct KeyBind{
+		public string[] Names;
+		public KeyCode[] theBind;
+		public KeyBind(string[] nNames, KeyCode[] NewBind){
+			Names = nNames; theBind = NewBind;
+		}
+	}
+	KeyCode[] potentialKB;
 	// Options
 
 	// Game
+	public int saveIndex = -1;
 	public string Name;
 	public int GameMode = 0; // 0 Campaign, 1 Endless, 2 Skirmish
 	public Stat[] Statistics;
 	public int Level = 1;
-	public int DifficultyLevel = 1;
+	public int Difficulty = 0;
 	public int CurrentScore = 0;
     public int TempScore = 0;
 	public int Mooney = 0;
@@ -49,6 +61,17 @@ public class GameScript : MonoBehaviour {
 	public string OwnedAdditions = "10000";
 	public int CurrentPaint = 0;
 	public string OwnedPaints = "10000";
+
+	public List<HighScore> HighScores;
+	[System.Serializable] public struct HighScore{
+		public string hsName;
+		public int hsMode, hsDiff, hsScore, hsDate;
+		public HighScore(string newName, int newScore, int newMode, int newDiff, int newDate){
+			hsName = newName; hsScore = newScore; hsDiff = newDiff; hsMode = newMode; hsDate = newDate;
+		}
+	}
+	int hsDates = 0;
+	public string displayedHS;
 	// Game
 
 	// Misc
@@ -57,7 +80,6 @@ public class GameScript : MonoBehaviour {
 	public int PreviousScore = 0;
 	public string PreviousPlane = "";
     public bool HasDied = false;
-	public string OptionsChoice = "";
 	// Misc
 
 	// Main Variables
@@ -79,7 +101,7 @@ public class GameScript : MonoBehaviour {
 					Volumes[0] = PlayerPrefs.GetFloat ("MasterVolume");
 					Volumes[1] = PlayerPrefs.GetFloat ("AudioVolume");
 					Volumes[2] = PlayerPrefs.GetFloat ("MusicVolume");
-					HighScore = PlayerPrefs.GetInt ("HighScore");
+					SaveScore("Load");
 					ControlScheme = PlayerPrefs.GetInt("Controls");
 
 					if (PlayerPrefs.GetString ("Inverted") == "True") InvertedMouse = true;
@@ -104,6 +126,25 @@ public class GameScript : MonoBehaviour {
 				LoadedResolutions = loadResolutions.ToArray();
 
 				statModify("SetUp", 0);
+
+				KeyBinds = new KeyBind[]{
+					new (new []{"Throttle", "Przepustnica"}, new []{KeyCode.LeftShift, KeyCode.LeftControl}),
+					new (new []{"Pitch", "Pochylanie"}, new []{KeyCode.W, KeyCode.S}),
+					new (new []{"Roll", "Przechylanie"}, new []{KeyCode.D, KeyCode.A}),
+					new (new []{"Yaw", "Odchylanie"}, new []{KeyCode.E, KeyCode.Q}),
+					new (new []{"Fire guns", "Strzelanie"}, new []{KeyCode.Mouse0}),
+					new (new []{"Aiming", "Celowanie"}, new []{KeyCode.Mouse1}),
+					new (new []{"Fire a present", "Wystrzelenie prezentu"}, new []{KeyCode.Space}),
+					new (new []{"Use a special", "Przedmiot specjalny"}, new []{KeyCode.R}),
+					new (new []{"Free view", "Wolny obrót"}, new []{KeyCode.V})
+				};
+
+				List<KeyCode> newPKB = new ();
+				foreach(KeyCode add in System.Enum.GetValues(typeof(KeyCode))){
+					newPKB.Add (add);
+				}
+				potentialKB = newPKB.ToArray();
+				recInput("Load");
 
 			} else {
 				Destroy (this.gameObject);
@@ -196,11 +237,11 @@ public class GameScript : MonoBehaviour {
 	public void SetGameOptions(string Which, string File){
 		File += "-" + Version + "-" + Build;
 		if(Which == "Empty"){
-			PlayerPrefs.SetInt (File + "SavedGame", 0);
+			PlayerPrefs.SetInt (File + "SavedGame", saveIndex);
 			Name = "TestSave";
 			GameMode = 1;
 			Level = 1;
-			DifficultyLevel = 1;
+			Difficulty = 1;
 			CurrentScore = 0;
             TempScore = 0;
 			Mooney = 0;
@@ -222,11 +263,11 @@ public class GameScript : MonoBehaviour {
 			OwnedPaints = "100000000000000000000000000000";
 			statModify("SetUp", 0);
 		} else if(Which == "Save"){
-			PlayerPrefs.SetInt (File + "SavedGame", 1);
+			PlayerPrefs.SetInt (File + "SavedGame", saveIndex);
 			PlayerPrefs.SetString (File + "Name", Name);
 			PlayerPrefs.SetInt (File + "Mode", GameMode);
 			PlayerPrefs.SetInt (File + "Level", Level);
-			PlayerPrefs.SetInt (File + "DifficultyLevel", DifficultyLevel);
+			PlayerPrefs.SetInt (File + "DifficultyLevel", Difficulty);
 			PlayerPrefs.SetInt (File + "CurrentScore", CurrentScore);
 			PlayerPrefs.SetInt (File + "Mooney", Mooney);
             PlayerPrefs.SetInt (File + "Parachutes", Parachutes);
@@ -245,12 +286,13 @@ public class GameScript : MonoBehaviour {
 			PlayerPrefs.SetInt (File + "CurrentPaint", CurrentPaint);
 			PlayerPrefs.SetString (File + "OwnedPaints", OwnedPaints);
 			PlayerPrefs.SetString (File + "Statistics", statModify("Save", 0, File));
+			SaveScore("Save");
 		} else if(Which == "Load"){
-			PlayerPrefs.SetInt (File + "SavedGame", 1);
+			saveIndex = PlayerPrefs.GetInt (File + "SavedGame");
 			Name = PlayerPrefs.GetString (File + "Name");
 			GameMode = PlayerPrefs.GetInt (File + "Mode");
 			Level = PlayerPrefs.GetInt (File + "Level");
-			DifficultyLevel = PlayerPrefs.GetInt (File + "DifficultyLevel");
+			Difficulty = PlayerPrefs.GetInt (File + "DifficultyLevel");
 			CurrentScore = PlayerPrefs.GetInt (File + "CurrentScore");
             TempScore = 0;
 			Mooney = PlayerPrefs.GetInt (File + "Mooney");
@@ -271,6 +313,7 @@ public class GameScript : MonoBehaviour {
 			CurrentPaint = PlayerPrefs.GetInt (File + "CurrentPaint");
 			OwnedPaints = PlayerPrefs.GetString (File + "OwnedPaints");
 			statModify("Load", 0, File + "Statistics");
+			SaveScore("Load");
 		} else if (Which == "Erase"){
 			PlayerPrefs.DeleteKey (File + "SavedGame");
 			PlayerPrefs.DeleteKey (File + "Name");
@@ -296,11 +339,139 @@ public class GameScript : MonoBehaviour {
 			PlayerPrefs.DeleteKey (File + "OwnedPaints");
 			PlayerPrefs.DeleteKey (File + "Statistics");
 			statModify("SetUp", 0);
+			//SaveScore("Wipe");
 		}
 	}
 
 	public void GainScore(int GainScore){
-		GameObject.Find("RoundScript").GetComponent<RoundScript>().TempScore += GainScore * DifficultyLevel;
+		GameObject.Find("RoundScript").GetComponent<RoundScript>().TempScore += (int)(GainScore * Mathf.Clamp(Difficulty, 0.5f, Mathf.Infinity));
+	}
+
+	public void SaveScore(string newName, int[] args = default){
+		switch(newName){
+			case "Save":
+				string Entry = "";
+				foreach(HighScore addScore in HighScores){
+					Entry += addScore.hsName + "©" + addScore.hsScore + "©" + addScore.hsMode + "©" + addScore.hsDiff + "©"+ addScore.hsDate + "©";
+				}
+				PlayerPrefs.SetString("HighScores", Entry);
+				break;
+			case "Load":
+				string scoreOutput = PlayerPrefs.GetString("HighScores");
+				int scoreParse = 0;
+				string tempName = "";
+				int[] tempVars = {0,0,0,0};
+
+				string temp = "";
+				for(int pa = 0; pa < scoreOutput.Length; pa++){
+					if(scoreOutput[pa] == '©'){
+						switch(scoreParse){
+							case 0: tempName = temp; scoreParse++; break;
+							case 4:
+								tempVars[scoreParse-1] = int.Parse(temp);
+								HighScores.Add(new(tempName, tempVars[0], tempVars[1], tempVars[2], tempVars[3]));
+								scoreParse = 0;
+								break;
+							default: tempVars[scoreParse-1] = int.Parse(temp); scoreParse++; break;
+						}
+						temp = "";
+					} else {
+						temp += scoreOutput[pa];
+					}
+				}
+				break;
+			case "Sort":
+				bool Bubble = true;
+				int How = args[0]; // 0 Decreasing, 1 Incresing, 2 Newest, 3 Oldest
+				for(int bs = 0; bs < HighScores.ToArray().Length-1; bs++){
+					if(bs == HighScores.ToArray().Length-1 && !Bubble){
+						Bubble = true; bs = 0;
+					} else if ( (How == 0 && HighScores[bs].hsScore > HighScores[bs+1].hsScore) || (How == 1 && HighScores[bs].hsScore < HighScores[bs+1].hsScore) || (How == 2 && HighScores[bs].hsDate > HighScores[bs+1].hsDate) || (How == 2 && HighScores[bs].hsDate < HighScores[bs+1].hsDate)){
+						Bubble = false;
+						HighScore T = HighScores[bs];
+						HighScores[bs] = HighScores[bs+1];
+						HighScores[bs+1] = T;
+					}
+				}
+				break;
+			case "Display":
+				string addtodisplay = "";
+				for(int ascore = HighScores.ToArray().Length-1; ascore >= 0; ascore--)
+					if((args[0] == 0 || HighScores[ascore].hsMode == args[0]-1) && (args[1] == 0 || HighScores[ascore].hsDiff == args[1]-1))
+						addtodisplay += HighScores[ascore].hsName + " - " + HighScores[ascore].hsScore + "\n";
+				displayedHS = addtodisplay;
+				break;
+			case "Wipe":
+				HighScores.Clear();
+				break;
+			default:
+				if(newName.Length >= 4 && newName[..4] == "Add_"){
+					string theName = newName[4..];
+					HighScores.Add(new(theName, args[0], args[1], args[2], hsDates));
+					hsDates++;
+				} else if (newName.Length >= 7 && newName[..6] == "Remove_"){
+					string findName = newName[7..];
+					for(int fk = 0; fk <= HighScores.ToArray().Length; fk++){
+						if(fk == HighScores.ToArray().Length){
+							Debug.LogError("No score entry of name " + newName + " found!");
+						} else if (HighScores[fk].hsName == findName){
+							HighScores.RemoveAt(fk);
+							HighScores.TrimExcess();
+							break;
+						}
+					}
+				}
+
+				break;
+		}
+	}
+
+	public int recInput(string func, int sub = 0){
+		switch(func){
+			case "Save":
+				string BindsToSave = "";
+				foreach(KeyBind saveKB in KeyBinds){
+					if(saveKB.theBind.Length == 2) BindsToSave += saveKB.theBind[0].ToString() + "-" + saveKB.theBind[1].ToString() + ";";
+					else BindsToSave += saveKB.theBind[0] + ";";
+				}
+				print("Saved key binds " + BindsToSave);
+				PlayerPrefs.SetString("SavedBinds", BindsToSave);
+				break;
+			case "Load":
+				if(PlayerPrefs.HasKey("SavedBinds")){
+					string BindsLoaded = PlayerPrefs.GetString("SavedBinds");
+					print("Loaded key binds " + BindsLoaded);
+					string[] blTemp = {"", ""};
+					int Flip = 0;
+					int Index = 0;
+					for(int bl = 0; bl < BindsLoaded.Length; bl++){
+						if(BindsLoaded[bl] == ';'){
+							Flip=0;
+							for(int fk = 0; fk < potentialKB.Length; fk++){
+								if(potentialKB[fk].ToString() == blTemp[0]) KeyBinds[Index].theBind[0] = potentialKB[fk];
+								else if(potentialKB[fk].ToString() == blTemp[1]) KeyBinds[Index].theBind[1] = potentialKB[fk];
+							}
+							Index++;
+						} else if(BindsLoaded[bl] == '-'){
+							Flip=1;
+						} else {
+							blTemp[Flip] += BindsLoaded[bl];
+						}
+					}
+				}
+				break;
+			default:
+				for(int fkb = 0; fkb <= KeyBinds.Length; fkb++){
+					if(fkb == KeyBinds.Length) Debug.LogError("No keybind of name " + func + " found!");
+					else if (KeyBinds[fkb].Names[0] == func){
+						if((sub == 0 && Input.GetKeyDown(KeyBinds[fkb].theBind[0])) || (sub == 1 && Input.GetKey(KeyBinds[fkb].theBind[0]))) return 1;
+						else if (KeyBinds[fkb].theBind.Length > 1 && ((sub == 0 && Input.GetKeyDown(KeyBinds[fkb].theBind[1])) || (sub == 1 && Input.GetKey(KeyBinds[fkb].theBind[1]))) ) return -1;
+						else return 0;
+					}
+				}
+				break;
+		}
+		return 0;
 	}
 
 	void OnApplicationQuit(){
@@ -315,7 +486,8 @@ public class GameScript : MonoBehaviour {
 			PlayerPrefs.SetFloat ("MasterVolume", Volumes[0]);
 			PlayerPrefs.SetFloat ("AudioVolume", Volumes[1]);
 			PlayerPrefs.SetFloat ("MusicVolume", Volumes[2]);
-			PlayerPrefs.SetInt ("HighScore", HighScore);
+			SaveScore("Save");//PlayerPrefs.SetInt ("HighScore", HighScore);
+			recInput("Save");
 		}
 
 	}
@@ -328,15 +500,17 @@ public class GameScript : MonoBehaviour {
 			string[] optiones = new string[]{};
 			switch(OptionsChoice){
 				case "Graph": 
-					if (Build == "Web") optiones = new string[]{"1100", "Quality", "Fullscreen", "", ""};
-					else optiones = new string[]{"1110", "Quality", "Fullscreen", "Resolution", ""}; 
+					if (Build == "Web") optiones = new string[]{"11000", "Quality", "Fullscreen", "", "", ""};
+					else optiones = new string[]{"11100", "Quality", "Fullscreen", "Resolution", "", ""}; 
 					break;
-				case "Sound": optiones = new string[]{"1110", "Master", "Music", "SFX", ""}; break;
-				case "Game": optiones = new string[]{"1110", "Controls", "Inverted", "Language", ""}; break;
-				default: optiones = new string[]{"1110", "Graph", "Sound", "Game", ""}; break;
+				case "Sound": optiones = new string[]{"11100", "Master", "Music", "SFX", "", ""}; break;
+				case "Game": optiones = new string[]{"11110", "Controls", "Inverted", "KeyBinds", "Language", ""}; break;
+				case "KeyBinds": optiones = new string[]{"10001", "currKBname", "currKBbind1", "currKBbind2", "", "currKBchange"}; break;
+				case "KeyBinds-Change": optiones = new string[]{"11000", "currKBname", "currKBanyKey", "", "", ""}; break;
+				default: optiones = new string[]{"11100", "Graph", "Sound", "Game", "", ""}; break;
 			}
 
-			for(int setOpt = 0; setOpt < 4; setOpt++){
+			for(int setOpt = 0; setOpt < 5; setOpt++){
 				ButtonScript currButt = OptionButtons[setOpt];
 				Text currText = OptionButtons[setOpt].GetComponent<Text>();
 				int Click = 0;
@@ -409,6 +583,40 @@ public class GameScript : MonoBehaviour {
 							if(Language == "English") Language = "Polski";
 							else Language = "English";
 						break;
+					case "KeyBinds":
+						currText.text = SetText("Key binds", "Przypisanie klawiszy");
+						if(Click!=0) OptionsChoice = optiones[setOpt+1];
+						break;
+					
+					case "currKBname":
+						currText.text = SetText("< Selected action - " + KeyBinds[selectedKB].Names[0], "< Wybrana akcja - " + KeyBinds[selectedKB].Names[1]) + " >";
+						if(Click!=0) selectedKB = (KeyBinds.Length + selectedKB + Click) % KeyBinds.Length;
+						break;
+					case "currKBbind1":
+						if (KeyBinds[selectedKB].theBind.Length == 1) currText.text = SetText("Current key: ", "Przypisany klawisz: ") + KeyBinds[selectedKB].theBind[0].ToString();
+						else currText.text = SetText("Positive value key: ", "Klawisz dodatnej wartości: ") + KeyBinds[selectedKB].theBind[1].ToString();
+						break;
+					case "currKBbind2":
+						if (KeyBinds[selectedKB].theBind.Length == 1) currText.text = "";
+						else currText.text = SetText("Negative value key: ", "Klawisz ujemnej wartości: ") + KeyBinds[selectedKB].theBind[0].ToString();
+						break;
+					case "currKBchange":
+						currText.text = SetText("Change it", "Zmnień go");
+						if(Click!=0) { OptionsChoice = "KeyBinds-Change"; KBphase = 0; }
+						break;
+					case "currKBanyKey":
+						if (KeyBinds[selectedKB].theBind.Length == 1) currText.text = SetText("Press any key to rebind", "Naciśnij dowolny klawisz do przypisania");
+						else if (KBphase == 0) currText.text = SetText("Press any key to rebind the positive action", "Naciśnij dowolny klawisz do przypisania do akcji pozytywnej");
+						else if (KBphase == 1) currText.text = SetText("Press any key to rebind the negative action", "Naciśnij dowolny klawisz do przypisania do akcji ujemnej");
+
+						if(!OptionsBack.IsSelected && Input.anyKeyDown) {
+							foreach(KeyCode checkKC in System.Enum.GetValues(typeof(KeyCode))) if (Input.GetKeyDown(checkKC)) {
+								KeyBinds[selectedKB].theBind[KBphase] = checkKC;
+								KBphase+=1;
+								if (KBphase >= KeyBinds[selectedKB].theBind.Length) OptionsChoice = "KeyBinds";
+							}
+						}
+						break;
 
 					default: currText.text = ""; break;
 				}
@@ -416,6 +624,8 @@ public class GameScript : MonoBehaviour {
 
 			if (OptionsBack.IsSelected == true && Input.GetMouseButtonDown (0)) {
 				if(OptionsChoice == "") OptionsChoice = "-1";
+				else if(OptionsChoice == "KeyBinds") OptionsChoice = "Game";
+				else if(OptionsChoice == "KeyBinds-Change") OptionsChoice = "KeyBinds";
 				else OptionsChoice = "";
 			}
 

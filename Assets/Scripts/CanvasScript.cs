@@ -16,6 +16,7 @@ public class CanvasScript : MonoBehaviour {
     public ButtonScript[] pButtons;
     string pOptions;
     // While Playing
+    public Image CloudImage;
     public Camera MainCamera;
     public PlayerScript player;
 	public GameObject PlayerHud;
@@ -49,7 +50,8 @@ public class CanvasScript : MonoBehaviour {
     string desiredResText = "";
 	// Flash
 	public Image FlashImg;
-	float[] FlashDisp = {0f, 1f};
+	float[] FlashDisp = {0f, 1f, 0f, 1f};
+    int[] FlashImp = {0, 0};
     // Flash
     // Radar/Map
     public GameObject Radar;
@@ -80,7 +82,7 @@ public class CanvasScript : MonoBehaviour {
         RS = GameObject.Find("RoundScript").GetComponent<RoundScript>();
         player = GameObject.FindGameObjectWithTag("Player").GetComponent<PlayerScript>();
         MainCamera = GameObject.Find("MainCamera").GetComponent<Camera>();
-        Flash(Color.black, new float[]{2f, 1f});
+        Flash(Color.black, new float[]{2f, 1f}, 10);
         ResultsBG = ResultsText.transform.parent.GetComponent<Image>();
 
         // Set intro textes
@@ -95,15 +97,29 @@ public class CanvasScript : MonoBehaviour {
 
     }
 
-    public void Flash(Color SetColor, float[] SetTime, int Act = 0){
-        if(Act == 1){
+    public void Flash(Color SetColor, float[] SetTime, int Importance = 0, int Act = 0){
+        if(Act == 2){
             FlashDisp[0] = Mathf.MoveTowards(FlashDisp[0], 0f, Time.deltaTime);
+            if(FlashDisp[0] < FlashDisp[1]/2f) FlashImp[0] = -9999;
             Color SA = FlashImg.color;
             SA.a = Mathf.Lerp(0f, 1f, FlashDisp[0] / FlashDisp[1]);
             FlashImg.color = SA;
-        } else {
+
+            FlashDisp[2] = Mathf.MoveTowards(FlashDisp[2], 0f, Time.deltaTime);
+            if(FlashDisp[2] < FlashDisp[3]/2f) FlashImp[1] = -9999;
+            Color SB = CloudImage.color;
+            SB.a = Mathf.Lerp(0f, 1f, FlashDisp[2] / FlashDisp[3]);
+            CloudImage.color = SB;
+        } else if (Act == 0 && Importance >= FlashImp[0]) { // Whole screen
             FlashImg.color = SetColor;
-            FlashDisp = new float[]{SetTime[0], SetTime[1]};
+            FlashImp[0] = Importance;
+            FlashDisp[0] = SetTime[0];
+            FlashDisp[1] = SetTime[1];
+        } else if (Act == 1 && Importance >= FlashImp[1]) { // Cloud image
+            CloudImage.color = SetColor;
+            FlashImp[1] = Importance;
+            FlashDisp[2] = SetTime[0];
+            FlashDisp[3] = SetTime[1];
         }
     }
 
@@ -137,7 +153,7 @@ public class CanvasScript : MonoBehaviour {
 	void Update(){
 
         Music();
-        Flash(default, default, 1);
+        Flash(default, default, 0, 2);
         Message();
         
         if(RS.State == "SuccessDP"){
@@ -259,9 +275,9 @@ public class CanvasScript : MonoBehaviour {
 
             string[] buttonStuff;
             switch(pOptions){
-                case "Options": buttonStuff = new string[]{"222202", "", "", "", "", "", ""}; break;
-                case "Quit": buttonStuff = new string[]{"000110", "", "unsure", "", "quityes", "quitno", ""}; break;
-                default: buttonStuff = new string[]{"011010", "", "res", "opt", "", "quit", ""}; break;
+                case "Options": buttonStuff = new string[]{"222222", "", "", "", "", "", ""}; break;
+                case "Quit": buttonStuff = new string[]{"000011", "unsure", "", "", "", "quityes", "quitno"}; break;
+                default: buttonStuff = new string[]{"110001", "res", "opt", "", "", "", "quit"}; break;
             }
 
             if(pOptions == "Options"){

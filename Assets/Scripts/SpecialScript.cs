@@ -14,9 +14,11 @@ public class SpecialScript : MonoBehaviour {
 	// Main Variables
 
 	// Explosion
+	public AudioClip[] ExplosionSounds;
 	public float ExplosionRadius = 1f;
 	public float ExplosionPower = 10f;
 	public bool IsLethal = true;
+	bool shook = true;
 	// Explosion
 
 	// Use this for initialization
@@ -26,6 +28,12 @@ public class SpecialScript : MonoBehaviour {
 			if (ChooseSpecialObject.name == TypeofSpecial) {
 				SpecialObject = ChooseSpecialObject.gameObject;
 				ChooseSpecialObject.gameObject.SetActive (true);
+				if(TypeofSpecial == "Explosion"){
+					if(Vector3.Distance(this.transform.position, GameObject.Find("MainCamera").transform.position) > 300f) SpecialObject.GetComponent<AudioSource>().clip = ExplosionSounds[1];
+					else SpecialObject.GetComponent<AudioSource>().clip = ExplosionSounds[0];
+					SpecialObject.GetComponent<AudioSource>().pitch = Random.Range(0.8f, 1.2f);
+					SpecialObject.GetComponent<AudioSource>().Play();
+				}
 			} else {
 				ChooseSpecialObject.gameObject.SetActive (false);
 			}
@@ -41,9 +49,12 @@ public class SpecialScript : MonoBehaviour {
 			SpecialObject.transform.localScale = new Vector3 (ExplosionRadius, ExplosionRadius, ExplosionRadius);
 			// Shake Camera of a player
 			if(GameObject.Find("MainPlane") != null){
-				if(Vector3.Distance(this.transform.position, GameObject.Find("MainPlane").transform.position) <= ExplosionRadius * 10f && IsLethal == true){
-					GameObject.Find ("MainPlane").GetComponent<PlayerScript> ().ShakePower = (1f - (Vector3.Distance(this.transform.position, GameObject.Find("MainPlane").transform.position) / (ExplosionRadius * 10f))) * (ExplosionPower / 10f);
-					GameObject.Find ("MainPlane").GetComponent<PlayerScript> ().ShakeDecay = 0.1f;
+				if(Vector3.Distance(this.transform.position, GameObject.Find("MainPlane").transform.position) <= ExplosionRadius * 100f && shook == true){
+					float shakePower = 1f - (Vector3.Distance(this.transform.position, GameObject.Find("MainPlane").transform.position) / (ExplosionRadius * 100f));
+					GameObject.Find ("MainPlane").GetComponent<PlayerScript> ().ShakePower = shakePower * (ExplosionPower / 10f);
+					GameObject.Find ("MainPlane").GetComponent<PlayerScript> ().ShakeDecay = 1f;
+					GameObject.Find("MainCanvas").GetComponent<CanvasScript> ().Flash(new Color(1f,0.75f,0.5f, 1f), new float[]{0.5f, 5f-(shakePower*4f)}, -1);
+					shook = false;
 				}
 			}
 			// Shake Camera of a player

@@ -25,7 +25,7 @@ public class EnemyVesselScript : MonoBehaviour {
 
 	// Main Variables
 	public float Power = 1f;
-	public float Health, Speed, MaxSpeed, RotationSpeed = 100f;
+	public float Health, Speed, FowardSpeed, MaxSpeed, RotationSpeed = 100f;
 	public bool IsDead = false;
 	public string TypeofVessel = "Messerschmitt";
 	public Vector3 PointofInterest;
@@ -37,13 +37,15 @@ public class EnemyVesselScript : MonoBehaviour {
 
     // Ai Bevahiour
     float Change = 0f;
-    float PullUpMultiplier = 0f;
+    float mtThinkTime = 0f;
 	float DetectionDistance = 0f;
 	float GunSpeed = 0f;
 
 	public Transform PointThere;
 	Vector3 FlyingTowards;
+	Vector3 LiftDir = Vector3.up;
 	Vector3 ElevatorFlapsRudder = Vector3.zero;
+	float tAnglez, tCF = 0f;
 	float Stalling = 0f;
 
 	public GameObject GuardedTarget;
@@ -88,7 +90,7 @@ public class EnemyVesselScript : MonoBehaviour {
 		if (TypeofVessel == "Messerschmitt") {
 			Health = Mathf.Lerp(10f, 100f, PowerActual);
 			MaxSpeed = Speed = Mathf.Lerp(50f, 200f, PowerActual);
-			RotationSpeed = Mathf.Lerp(0.25f, 2f, PowerActual);
+			RotationSpeed = Mathf.Lerp(0.25f, 1f, PowerActual);
 			GunSpeed = 750f;
 			DetectionDistance = Mathf.Lerp(400f, 1500f, PowerActual);
 		} else if (TypeofVessel == "Messerschmitt Me 262") {
@@ -100,7 +102,7 @@ public class EnemyVesselScript : MonoBehaviour {
 		} else if(TypeofVessel == "Messerschmitt K4"){
 			Health = Mathf.Lerp(20f, 200f, PowerActual);
 			MaxSpeed = Speed = Mathf.Lerp(50f, 200f, PowerActual);
-			RotationSpeed = Mathf.Lerp(1f, 3f, PowerActual);
+			RotationSpeed = Mathf.Lerp(1f, 1.5f, PowerActual);
 			GunSpeed = 1000f;
 			DetectionDistance = Mathf.Lerp(400f, 1500f, PowerActual);
 		} else if(TypeofVessel == "Messerschmitt 110"){
@@ -118,7 +120,8 @@ public class EnemyVesselScript : MonoBehaviour {
 			GunSpeed = 1000f;
 			DetectionDistance = Mathf.Lerp(250f, 2000f, PowerActual);
 		}
-		Speed = MaxSpeed;
+		Speed = FowardSpeed = MaxSpeed;
+		FlyingTowards = this.transform.forward;
 		Power = PowerActual;
 	}
 	
@@ -147,6 +150,8 @@ public class EnemyVesselScript : MonoBehaviour {
 			Model.transform.GetChild (1).transform.Rotate (10f, 0f, 0f);
 		}
 		// Visual
+
+		if(this.transform.position.y < 0f) Health = 0f;
 		
 	}
 
@@ -241,17 +246,15 @@ public class EnemyVesselScript : MonoBehaviour {
         // Set X Angle
 
         float DesiredSpeed;
-        if (AngleX > 0.5) DesiredSpeed = Mathf.Lerp(MaxSpeed * Throttle, MaxSpeed*3f, (AngleX - 0.5f) * 2f);
+        if (AngleX > 0.5f) DesiredSpeed = Mathf.Lerp(MaxSpeed * Throttle, MaxSpeed*3f, (AngleX - 0.5f) * 2f);
         else DesiredSpeed = Mathf.Lerp(-MaxSpeed, MaxSpeed * Throttle, AngleX * 2f);
-        Speed = Mathf.MoveTowards (Speed, DesiredSpeed, MaxSpeed / 500f);
+        if (FowardSpeed < DesiredSpeed || AngleX < 0.5f) FowardSpeed = Mathf.MoveTowards (FowardSpeed, DesiredSpeed, MaxSpeed / 500f);
+		else FowardSpeed = Mathf.MoveTowards (FowardSpeed, DesiredSpeed, MaxSpeed / 1000f);
+		Speed = Mathf.Lerp(FowardSpeed, 0f, Vector3.Angle(this.transform.forward, FlyingTowards) / 180f);
 		// Set speed
 
-		// Diving too fast
-		if(Speed / MaxSpeed >= 1.75f) Throttle = 0f;
-		// Diving too fast
-
 		// Move forward
-		FlyingTowards = Vector3.Lerp(FlyingTowards, this.transform.forward, Mathf.Clamp((Speed / MaxSpeed), 0f, 1f) * 0.03f);
+		FlyingTowards = Vector3.Lerp(FlyingTowards, this.transform.forward, Mathf.Clamp(Speed / MaxSpeed, 0f, 1f) * 0.03f);
 		this.transform.position += FlyingTowards  * (Speed/90f);
 		// Move forward
 
@@ -272,14 +275,14 @@ public class EnemyVesselScript : MonoBehaviour {
 			AngleZ = 0f;
 			CF = 1f;
 		}
-		AngleZ *= AngleDecreaser;
-		CF *= AngleDecreaser;
+		AngleZ *= AngleDecreaser; tAnglez = Mathf.Lerp(tAnglez, AngleZ, 0.025f);
+		CF *= AngleDecreaser; tCF = Mathf.Lerp(tCF, CF, 0.025f);
 		// Chandelle
 		// Flaps and rudder
 		float RotationalSpeed = Speed / MaxSpeed;
 		this.transform.Rotate(ElevatorFlapsRudder * (RotationSpeed * RotationalSpeed)); // Turning speed
-		this.transform.Rotate(new Vector3 (0f, AngleZ / 2f * RotationSpeed, 0f));
-		this.transform.eulerAngles += new Vector3 ((CF / 2f) * (RotationSpeed * RotationalSpeed), 0f, 0f);
+		this.transform.Rotate(new Vector3 (0f, tAnglez / 2f * RotationSpeed, 0f));
+		this.transform.eulerAngles += new Vector3 (tCF / 2f * RotationSpeed, 0f, 0f);
 
 		PointThere.transform.position = this.transform.position;
 
@@ -296,30 +299,34 @@ public class EnemyVesselScript : MonoBehaviour {
 					)
 				,
 					new Vector3(
-						Mathf.Clamp((AngleX - 0.4f) * -3f + TurnX, -1f, 1f),
+						Mathf.Clamp(TurnX + Mathf.Abs(AngleZ)*-20f, -1f, 1f),
 						0,//Mathf.Clamp(AngleX, -0.3f, 0.3f),
-						Mathf.Clamp(Mathf.Lerp( TurnY / -3f , 0f, Mathf.Abs(AngleZ*2f) ), -1f, 1f)
-					)
-				,
-				Mathf.Clamp((Mathf.Abs(TurnY)-10f) / 30f, 0f, 1f)
+						Mathf.Clamp(Mathf.Lerp( TurnY / -2f, TurnY / 2f, Mathf.Abs(AngleZ*0.8f) ), -1f, 1f)
+				)
+			,
+				Mathf.Clamp((Mathf.Abs(TurnY)-10f) / 30f - Mathf.Clamp(Mathf.Abs(TurnY)-160f, 0f, 10f), 0f, 1f)
 				),
 				0.1f
 			);
+
+		if(Paintballed > 0f) ElevatorFlapsRudder = new Vector3(1f, 1f, 1f);
 		
 		// Flaps and rudder
 
 		// Lift force
-		this.transform.position += Vector3.down*0.5f + Vector3.Lerp(this.transform.up, Vector3.down, Stalling / 3f) * Mathf.Lerp(0.25f, 0.75f, Speed/MaxSpeed);
+		float AngleOfAttack = Mathf.Lerp(0f, 1f, AngleX);
+		LiftDir = Vector3.Lerp(LiftDir, Vector3.down*0.5f + Vector3.Lerp(this.transform.up, Vector3.down, Stalling / 3f) * Mathf.Lerp(1f, AngleOfAttack, Speed/MaxSpeed), 0.1f);
+		this.transform.position += LiftDir;
 		// Lift force
 
 		// Stalling
-		if(Speed <= (MaxSpeed / 3.9f))
-			Stalling = Mathf.Clamp(Stalling + 0.02f, 0f, 5f);
+		if(Speed <= (MaxSpeed / 3f))
+			Stalling = Mathf.Clamp(Stalling + 0.02f, 0f, 1f);
 
 		if(Stalling > 0f){
             Stalling -= 0.01f;
 			this.transform.position += Vector3.up * -0.1f; 
-			this.transform.eulerAngles += new Vector3(Mathf.Lerp(Stalling*2f, 0f, (AngleX-0.5f)*2f), 0f, 0f);
+			this.transform.eulerAngles += new Vector3(Mathf.Lerp(Stalling, 0f, AngleX), 0f, 0f);
 		}
 		// Stalling
 
@@ -328,33 +335,39 @@ public class EnemyVesselScript : MonoBehaviour {
     void Plane() {
 
         // Flight Mechanics
-        if (Paintballed <= 0f){
-			PointofInterest = new Vector3(
-				PointofInterest.x,
-				Mathf.Clamp(PointofInterest.y, this.transform.position.y-2000f, this.transform.position.y+10f),
-				PointofInterest.z
-			);
 			PointThere.LookAt(PointofInterest);
+			Vector3 vc = PointThere.eulerAngles;
+			if(vc.x > 180f) vc.x = Mathf.Clamp(vc.x, 350f, 360f);
+			//else if (vc.x < 0f) vc.x = Mathf.Clamp(vc.x, -30f, 0f);
+			PointThere.eulerAngles = vc;
 			Mechanics(1f);
-		}
         // Flight Mechanics
 
         // Think
         // ChooseOption
-        string WhichOne;
-        // Check for collision
+        string WhichOne = "";
 
+        // Check for collision
         Ray CheckGround = new(this.transform.position, this.transform.forward);
         if (Physics.Raycast(CheckGround, out RaycastHit CheckGroundHit, Speed * 10f)){
-            if (CheckGroundHit.collider != null && CheckGroundHit.collider.GetComponent<EnemyVesselScript>() == null && CheckGroundHit.collider.tag != "Cloud" && !(CheckGroundHit.collider.tag == "Player" && Time.timeSinceLevelLoad % 4f < 2f) ){
-                PullUpMultiplier = 3f;
+            if (CheckGroundHit.collider.GetComponent<EnemyVesselScript>() == null && CheckGroundHit.collider.tag != "Cloud"){
+                mtThinkTime = 1f;
+				if (CheckGroundHit.collider.tag == "Player" && Time.timeSinceLevelLoad % 4f < 2f) WhichOne = "Evade";
+				else if (CheckGroundHit.collider.tag != "Player") WhichOne = "PullUp";
             }
         }
-		if(this.transform.position.y < 100f) PullUpMultiplier = 3f;
-        // Check for collision
-        if (PullUpMultiplier > 0f) {
+		if(this.transform.position.y < 200f) {
+			mtThinkTime = 3f;
 			WhichOne = "PullUp";
-            PullUpMultiplier -= 0.1f;
+		}
+		/*if(Speed/MaxSpeed < 0.5f){
+			mtThinkTime = 10f;
+			mtThinkType = "Stalling";
+		}*/
+        // Check for collision
+
+        if (mtThinkTime > 0f) {
+            mtThinkTime -= 0.1f;
 		} else if (PlayerSeen != null) {
 			if (Vector3.Distance (this.transform.position, PlayerSeen.transform.position) < DetectionDistance) {
 				WhichOne = "Dogfight";
@@ -369,6 +382,7 @@ public class EnemyVesselScript : MonoBehaviour {
 		float GunDistance = 300f;
 		if(TypeofVessel == "Messerschmitt Me 262") GunDistance = 1000f;
 		// Set gun distance
+		Vector3 btrFoward = this.transform.forward; btrFoward.y = 0f;
 		if (GuardedTarget && WhichOne == "Patrol") {
 			float dist = Vector3.Distance(this.transform.position, PointofInterest);
 			if (Change <= 0f || dist < 100f || dist > 2500f) {
@@ -379,7 +393,11 @@ public class EnemyVesselScript : MonoBehaviour {
 				Change -= 0.01f;
 			}
 		} else if (WhichOne == "PullUp"){
-            PointofInterest = this.transform.position + this.transform.forward*10f + Vector3.up;
+            PointofInterest = this.transform.position + btrFoward.normalized*3f + Vector3.up;
+		} else if (WhichOne == "Evade"){
+            PointofInterest = this.transform.position + this.transform.forward*10f + this.transform.right*10f;
+		} else if (WhichOne == "Stalling"){
+            PointofInterest = this.transform.position + btrFoward.normalized;
 		} else if(WhichOne == "Dogfight"){
 			PointofInterest = Lead(PlayerSeen);
 			if (Vector3.Distance (this.transform.position, PlayerSeen.transform.position) < GunDistance && Quaternion.Angle (this.transform.rotation, Quaternion.LookRotation (PointofInterest - this.transform.position)) < 5f) {

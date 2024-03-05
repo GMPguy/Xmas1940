@@ -14288,10 +14288,10 @@ AudioSource:
   SpatializePostEffects: 0
   Priority: 128
   DopplerLevel: 0
-  MinDistance: 50
-  MaxDistance: 2000
+  MinDistance: 100
+  MaxDistance: 5000
   Pan2D: 0
-  rolloffMode: 0
+  rolloffMode: 1
   BypassEffects: 0
   BypassListenerEffects: 0
   BypassReverbZones: 0
@@ -19351,6 +19351,9 @@ MonoBehaviour:
   SpecialObject: {fileID: 0}
   TypeofSpecial: 
   CausedByPlayer: 0
+  ExplosionSounds:
+  - {fileID: 8300000, guid: 244b238045e7d904c83b630dcaa9921c, type: 3}
+  - {fileID: 8300000, guid: 94d06dd599d21e541a45b5640089417b, type: 3}
   ExplosionRadius: 1
   ExplosionPower: 10
   IsLethal: 1
@@ -19470,7 +19473,7 @@ ParticleSystem:
     startLifetime:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 2
+      scalar: 10
       minScalar: 0.0001
       maxCurve:
         serializedVersion: 2
@@ -19523,7 +19526,7 @@ ParticleSystem:
     startSpeed:
       serializedVersion: 2
       minMaxState: 3
-      scalar: 5
+      scalar: 2
       minScalar: 0
       maxCurve:
         serializedVersion: 2
@@ -19963,7 +19966,7 @@ ParticleSystem:
     gravityModifier:
       serializedVersion: 2
       minMaxState: 0
-      scalar: -0.5
+      scalar: -0.1
       minScalar: 0
       maxCurve:
         serializedVersion: 2

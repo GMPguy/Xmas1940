@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.Services.Analytics;
 using UnityEngine;
+using UnityEngine.UIElements;
 using Random = UnityEngine.Random;
 
 public class PlayerScript : MonoBehaviour {
@@ -38,13 +39,6 @@ public class PlayerScript : MonoBehaviour {
 	ItemClasses.Special SpecialType;
 	ItemClasses.Special Addition;
 	ItemClasses.Paint Paint;
-	/*public string PlaneModel = "BP Mark.I";
-	public string EngineModel = "Basic Propeller";
-	public string GunType = "Vickers";
-	public string PresentCannonType = "Slingshot";
-	public string SpecialType = "None";
-	public string Addition = "None";
-	public string Paint = "Basic Paint";*/
 	// Plane options
 
 	// Stats
@@ -70,6 +64,7 @@ public class PlayerScript : MonoBehaviour {
 
 	public float MaxSpeed = 100f;
 	public float Speed = 0f;
+	public float FowardSpeed = 0f;
 	public float RotationSpeed = 1f;
 
 	public int AirplaneClass;
@@ -85,7 +80,9 @@ public class PlayerScript : MonoBehaviour {
 	public Transform PointThere;
 	Vector2 PTturn;
     public string WhichCamera = "Normal";
+	float tAnglez, tCF = 0;
 	Vector3 FlyingTowards;
+	Vector3 LiftDir;
 	public Vector3 PrevPos;
 	// Mechanics
 
@@ -94,6 +91,12 @@ public class PlayerScript : MonoBehaviour {
 	public float ShakeDecay = 1f;
 	Vector3 ShakeScreen;
 	// Screen Shake
+
+	// Bombs
+	Vector3[] BombPositions = {Vector3.zero, Vector3.zero};
+	bool[] BombShows = {false,false};
+	public Transform[] BombGuis;
+	// Bombs
 
 	// Misc
 	public Color32 PresentColor1;
@@ -109,6 +112,7 @@ public class PlayerScript : MonoBehaviour {
 	public float Flares = 0f;
 	public float Intro = 5f;
 	int IntroZoom = 0;
+	float earProtection = 0;
 	// Misc
 
 	void Start () {
@@ -116,6 +120,16 @@ public class PlayerScript : MonoBehaviour {
 		GS = GameObject.Find("GameScript").GetComponent<GameScript>();
 		IC = GS.GetComponent<ItemClasses>();
 		RS = GameObject.Find("RoundScript").GetComponent<RoundScript>();
+
+		if(GS.GameMode == 2){
+			GS.CurrentPlaneModel = (int)Random.Range(0f, IC.PlaneModels.Length-0.1f);
+            GS.CurrentEngineModel = (int)Random.Range(0f, IC.EngineModels.Length-0.1f);
+            GS.CurrentGunType = (int)Random.Range(0f, IC.Guns.Length-0.1f);
+            GS.CurrentPresentCannonType = (int)Random.Range(0f, IC.Presents.Length-0.1f);
+            GS.CurrentSpecialType = (int)Random.Range(0f, IC.Specials.Length-0.1f);
+            GS.CurrentAddition = (int)Random.Range(0f, IC.Additions.Length-0.1f);
+            GS.CurrentPaint = (int)Random.Range(0f, IC.Paints.Length-0.1f);
+		}
 
 		PlaneModel = IC.PlaneModels[GS.CurrentPlaneModel];
 		EngineModel = IC.EngineModels[GS.CurrentEngineModel];
@@ -131,6 +145,9 @@ public class PlayerScript : MonoBehaviour {
 
 		PointThere.SetParent(null);
 		IntroZoom = 0;//(int)Random.Range(0f, 2.9f);
+
+		LeadBomb(0, 0f);
+		LeadBomb(1, 0f);
 		
 	}
 
@@ -178,10 +195,11 @@ public class PlayerScript : MonoBehaviour {
             if (Throttle > 1f) {
                 ShakePower = (Throttle - 1f) * 0.5f;
                 ShakeDecay = 0.1f;
-                if (!Input.GetButton("Throttle")) Throttle -= 0.01f;
+                if (GS.recInput("Throttle", 1) == 0) Throttle -= 0.01f;
             }
         }
 
+		if(earProtection > 0f) earProtection -= 0.02f;
 		if(GunCooldown > -1f)GunCooldown -= 0.02f;
 		if(Flares > 0f) Flares -= 0.01f;
 		if(PresentCooldown > 0f){
@@ -197,11 +215,12 @@ public class PlayerScript : MonoBehaviour {
 
 		// Camera
 		if(Intro <= 0f){
+			float divASC = (Camera.GetComponent<Camera> ().fieldOfView-30f) / 30f;
 			if (ControlType == "Point") {
 
-				if (Input.GetButton("Free Look")) {
+				if (GS.recInput("Free view", 1) != 0) {
 	            	WhichCamera = "Free";
-				} else if (Input.GetButton("Aim")) {
+				} else if (GS.recInput("Aiming", 1) != 0) {
 	    	        if (Addition.Names[0] == "Turret"){
     	    	        WhichCamera = "Turret";
 					} else {
@@ -211,22 +230,22 @@ public class PlayerScript : MonoBehaviour {
 					WhichCamera = "Normal";
 				}
 
-				Camera.transform.position = this.transform.position + this.transform.up * 2f + PointThere.forward*-15f + ShakeScreen;
+				Camera.transform.position = this.transform.position + this.transform.up * Mathf.Lerp(4f, 2f, divASC) + PointThere.forward*-15f + ShakeScreen;
 				Camera.transform.LookAt(PointThere.position + PointThere.forward*1000f);
-				Cursor.lockState = CursorLockMode.Locked;
+				UnityEngine.Cursor.lockState = CursorLockMode.Locked;
 
 			} else {
 
-				if (Input.GetButton("Free Look") || Quaternion.Angle(FreeLook.transform.localRotation, Quaternion.identity) > 1f) {
+				if (GS.recInput("Free view", 1) != 0 || Quaternion.Angle(FreeLook.transform.localRotation, Quaternion.identity) > 1f) {
 	    	        WhichCamera = "Free";
 
     	    	    // Rotate Camera
 	            	Camera.transform.position = FreeLook.transform.position + this.transform.up*2f + (FreeLook.transform.forward * -15f);
 	            	Camera.transform.LookAt (FreeLook.transform.position + FreeLook.transform.forward * 1000f, this.transform.up);
-    	    	    if (Input.GetButton("Free Look")) FreeLook.transform.localRotation = Quaternion.Lerp(FreeLook.transform.localRotation, Quaternion.Euler(-90f * SteerPosition.y, 180f * SteerPosition.x, 0f), 0.1f);
+    	    	    if (GS.recInput("Free view", 1) != 0) FreeLook.transform.localRotation = Quaternion.Lerp(FreeLook.transform.localRotation, Quaternion.Euler(-90f * SteerPosition.y, 180f * SteerPosition.x, 0f), 0.1f);
         		    else FreeLook.transform.localRotation = Quaternion.Lerp(FreeLook.transform.localRotation, Quaternion.identity, 0.5f);
 					// Rotate Camera
-				} else if(Input.GetButton("Aim") && Addition.Names[0] == "Turret"){
+				} else if(GS.recInput("Aiming", 1) != 0 && Addition.Names[0] == "Turret"){
         		    WhichCamera = "Turret";
         	        Camera.transform.position = Turret.transform.GetChild(0).position + (ShakeScreen / 10f);
     	        	Camera.transform.rotation = Turret.transform.GetChild(0).rotation;
@@ -237,9 +256,8 @@ public class PlayerScript : MonoBehaviour {
     		        Turret.transform.GetChild(1).gameObject.SetActive(false);
     	            Turret.transform.GetChild(2).gameObject.SetActive(true);
 				} else {
-					if(Input.GetButton("Aim")) WhichCamera = "Aim";
+					if(GS.recInput("Aiming", 1) != 0) WhichCamera = "Aim";
     		        else WhichCamera = "Normal";
-					float divASC = (Camera.GetComponent<Camera> ().fieldOfView-30f) / 30f;
 	        	    Vector3 AddSteerCamera = this.transform.right * ((ElevatorFlapsRudder.z - ElevatorFlapsRudder.y) * -2f) + this.transform.up * (ElevatorFlapsRudder.x * -2f);
 					Camera.transform.position = AddSteerCamera*divASC + (this.transform.position + ShakeScreen) + (this.transform.forward * -5f) + (this.transform.forward * (Speed / MaxSpeed) * -10f) + (this.transform.up * Mathf.Lerp(4f, 2f, divASC) );
 					//Camera.transform.LookAt (Camera.transform.position + (this.transform.forward * 1f), this.transform.up * 1f);
@@ -265,13 +283,12 @@ public class PlayerScript : MonoBehaviour {
 
 		}
 
-        float DesiredPOV;
+        float DesiredPOV = 60f;
         if (WhichCamera == "Aim" || WhichCamera == "Turret") {
 			if (Addition.Names[0] == "Zoom") DesiredPOV = 10f;
-			else DesiredPOV = 30f;
+			else if (!(ControlType != "Point" && WhichCamera == "Turret")) DesiredPOV = 30f;
 		} else {
 			if(WhichCamera == "Free") DesiredPOV = 80f;
-			else DesiredPOV = 60f;
             if (Addition.Names[0] == "Turret" && WhichCamera != "Turret") {
                 Turret.transform.GetChild(3).gameObject.SetActive(false);
                 Turret.transform.GetChild(1).gameObject.SetActive(true);
@@ -353,15 +370,16 @@ public class PlayerScript : MonoBehaviour {
 
 		// Dead
 		if(Health <= 0f){
-
-			RS.DeadPlane(new[]{this.transform, CurrentPlane.transform}, Speed, ElevatorFlapsRudder);
+			Health = 999999f;
+			GameObject Corps = RS.DeadPlane(new[]{this.transform, CurrentPlane.transform}, Speed, ElevatorFlapsRudder);
 			GS.statModify("Summarize", 1);
 			GS.Parachutes -= 1;
-            if (GS.Parachutes <= 0){
+            if (GS.Parachutes < 0){
+				GS.CurrentScore += RS.TempScore;
                 GS.PreviousScore = GS.CurrentScore;
                 GS.PreviousPlane = PlaneModel.Names[0];
-                if (GS.PreviousScore > GS.HighScore)
-                    GS.HighScore = GS.PreviousScore;
+				Corps.GetComponent<PlaneDead>().IsGameOver = true;
+                GS.SaveScore("Add_" + GS.Name, new[]{GS.CurrentScore, GS.GameMode, GS.Difficulty});
             } else {
                 GS.HasDied = true;
             }
@@ -398,7 +416,7 @@ public class PlayerScript : MonoBehaviour {
 
 		// Fuel
 		if(Throttle > 0f && EngineModel.Names[0] != "Magic Reindeer Dust")
-			Fuel -= Throttle / 100f * (float)GS.DifficultyLevel;
+			Fuel -= Throttle / 100f * Mathf.Clamp(GS.Difficulty, 0f, 2f);
 		// Fuel
 
 	}
@@ -542,15 +560,17 @@ public class PlayerScript : MonoBehaviour {
 
 		// Set speed
 		// Set X Angle
-		float AngleX = 1f;
+		float AngleX = 1f; // When x is greater, it means, the plane is diving down
 		if( this.transform.eulerAngles.x >= 0f &&  this.transform.eulerAngles.x <= 90f) AngleX = 0.5f + ((this.transform.eulerAngles.x / 90f) / 2f);
 		else if( this.transform.eulerAngles.x >= 270f &&  this.transform.eulerAngles.x <= 360f) AngleX = ((270f - this.transform.eulerAngles.x) / -90f) / 2f;
         // Set X Angle
 
         float DesiredSpeed;
-        if (AngleX > 0.5) DesiredSpeed = Mathf.Lerp(MaxSpeed * Throttle, MaxSpeed*3f, (AngleX - 0.5f) * 2f);
+        if (AngleX > 0.5f) DesiredSpeed = Mathf.Lerp(MaxSpeed * Throttle, MaxSpeed*3f, (AngleX - 0.5f) * 2f);
         else DesiredSpeed = Mathf.Lerp(-MaxSpeed, MaxSpeed * Throttle, AngleX * 2f);
-        Speed = Mathf.MoveTowards (Speed, DesiredSpeed, MaxSpeed / 500f);
+        if (FowardSpeed < DesiredSpeed || AngleX < 0.5f) FowardSpeed = Mathf.MoveTowards (FowardSpeed, DesiredSpeed, MaxSpeed / 500f);
+		else FowardSpeed = Mathf.MoveTowards (FowardSpeed, DesiredSpeed, MaxSpeed / 1000f);
+		Speed = Mathf.Lerp(FowardSpeed, 0f, Vector3.Angle(this.transform.forward, FlyingTowards) / 180f);
 		// Set speed
 
 		// Diving too fast
@@ -564,7 +584,7 @@ public class PlayerScript : MonoBehaviour {
 
 		// Move forward
 		PrevPos = this.transform.position;
-		FlyingTowards = Vector3.Lerp(FlyingTowards, this.transform.forward, Mathf.Clamp((Speed / MaxSpeed), 0f, 1f) * 0.03f);
+		FlyingTowards = Vector3.Lerp(FlyingTowards, this.transform.forward, Mathf.Clamp(Speed / MaxSpeed, 0f, 1f) * 0.03f);
 		this.transform.position += FlyingTowards  * (Speed/90f);
 		// Move forward
 
@@ -585,15 +605,16 @@ public class PlayerScript : MonoBehaviour {
 			AngleZ = 0f;
 			CF = 1f;
 		}
-		AngleZ *= AngleDecreaser;
-		CF *= AngleDecreaser;
+		AngleZ *= AngleDecreaser; tAnglez = Mathf.Lerp(tAnglez, AngleZ, 0.025f);
+		CF *= AngleDecreaser; tCF = Mathf.Lerp(tCF, CF, 0.025f);
 		// Chandelle
 		// Flaps and rudder
 		float RotationalSpeed = Speed / MaxSpeed;
 		this.transform.Rotate(ElevatorFlapsRudder * (RotationSpeed * RotationalSpeed)); // Turning speed
-		this.transform.Rotate(new Vector3 (0f, AngleZ / 2f * RotationSpeed, 0f));
-		this.transform.eulerAngles += new Vector3 (CF / 2f * RotationSpeed, 0f, 0f);
+		this.transform.Rotate(new Vector3 (0f, tAnglez / 2f * RotationSpeed, 0f));
+		this.transform.eulerAngles += new Vector3 (tCF / 2f * RotationSpeed, 0f, 0f);
 
+		Vector3 DesiredEFR;
 		if(ControlType == "Point")
 		{
 
@@ -607,23 +628,31 @@ public class PlayerScript : MonoBehaviour {
 			if(WhichCamera == "Free" || WhichCamera == "Turret")
 				TurnX = TurnY = 0f;
 
+			DesiredEFR = Vector3.Lerp(
+				new Vector3(
+					Mathf.Clamp(TurnX / 10f, -1f, 1f),
+					Mathf.Clamp(TurnY / 10f, -1f, 1f),
+					Mathf.Clamp(AngleZ * 10f, -1f, 1f)
+				)
+			,
+				new Vector3(
+					Mathf.Clamp(TurnX + Mathf.Abs(AngleZ)*-20f, -1f, 1f),
+					0,//Mathf.Clamp(AngleX, -0.3f, 0.3f),
+					Mathf.Clamp(Mathf.Lerp( TurnY / -2f, TurnY / 2f, Mathf.Abs(AngleZ*0.8f) ), -1f, 1f)
+				)
+			,
+				Mathf.Clamp((Mathf.Abs(TurnY)-10f) / 30f - Mathf.Clamp(Mathf.Abs(TurnY)-160f, 0f, 10f), 0f, 1f)
+			);
+
+			if(GS.recInput("Pitch", 1) != 0 || GS.recInput("Roll", 1) != 0 || GS.recInput("Yaw", 1) != 0)
+				DesiredEFR = new Vector3(
+    	            GS.recInput("Pitch", 1) * Inverted,
+        	    	GS.recInput("Yaw", 1) / 3f,
+                	-GS.recInput("Roll", 1));
+
 			ElevatorFlapsRudder = Vector3.Lerp(
 				ElevatorFlapsRudder,
-				Vector3.Lerp(
-					new Vector3(
-						Mathf.Clamp(TurnX / 10f, -1f, 1f),
-						Mathf.Clamp(TurnY / 10f, -1f, 1f),
-						Mathf.Clamp(AngleZ * 10f, -1f, 1f)
-					)
-				,
-					new Vector3(
-						Mathf.Clamp((AngleX - 0.4f) * -3f + TurnX, -1f, 1f),
-						0,//Mathf.Clamp(AngleX, -0.3f, 0.3f),
-						Mathf.Clamp(Mathf.Lerp( TurnY / -3f , 0f, Mathf.Abs(AngleZ*2f) ), -1f, 1f)
-					)
-				,
-				Mathf.Clamp((Mathf.Abs(TurnY)-10f) / 30f, 0f, 1f)
-				),
+				DesiredEFR,
 				0.1f
 			);
 
@@ -642,26 +671,22 @@ public class PlayerScript : MonoBehaviour {
 	            ElevatorFlapsRudder = Vector3.Lerp(
 					ElevatorFlapsRudder,
 					new Vector3(
-    	            	0f,
-        	        	Input.GetAxis("Rudder") / 3f,
-            	    	0f),
-					0.1f);
-	        } else if (Input.GetKey (KeyCode.LeftShift)) {
-				ElevatorFlapsRudder = Vector3.Lerp(
-					ElevatorFlapsRudder,
-					new Vector3(
-						SteerPosition.y * -1f,
-						SteerPosition.x / 3f,
-						0f),
+    	            	GS.recInput("Pitch", 1) * Inverted,
+        	    		GS.recInput("Yaw", 1) / 3f,
+                		-GS.recInput("Roll", 1)),
 					0.1f);
 				ElevatorFlapsRudder = Vector3.Lerp(ElevatorFlapsRudder, Vector3.zero, Stalling /2f);
 			} else {
+				DesiredEFR = new Vector3(
+						SteerPosition.y * -1f,
+						GS.recInput("Yaw", 1) / 3f,
+						SteerPosition.x * -1f);
+				if(GS.recInput("Pitch", 1) != 0) DesiredEFR.x = GS.recInput("Pitch", 1) * Inverted;
+				if(GS.recInput("Roll", 1) != 0) DesiredEFR.z = -GS.recInput("Roll", 1);
+
 				ElevatorFlapsRudder = Vector3.Lerp(
 					ElevatorFlapsRudder,
-					new Vector3(
-						SteerPosition.y * -1f,
-						Input.GetAxis("Rudder") / 3f,
-						SteerPosition.x * -1f),
+					DesiredEFR,
 					0.1f);
 				ElevatorFlapsRudder = Vector3.Lerp(ElevatorFlapsRudder, Vector3.zero, Stalling /2f);
 			}
@@ -671,31 +696,51 @@ public class PlayerScript : MonoBehaviour {
 		// Flaps and rudder
 
 		// Lift force
-		this.transform.position += Vector3.down*0.5f + Vector3.Lerp(this.transform.up, Vector3.down, Stalling / 3f) * Mathf.Lerp(0.25f, 0.75f, Speed/MaxSpeed);
+		float AngleOfAttack = Mathf.Lerp(0f, 1f, AngleX);
+		LiftDir = Vector3.Lerp(LiftDir, Vector3.down*0.5f + Vector3.Lerp(this.transform.up, Vector3.down, Stalling / 3f) * Mathf.Lerp(1f, AngleOfAttack, Speed/MaxSpeed), 0.1f);
+		this.transform.position += LiftDir;
 		// Lift force
 
 		// Stalling
-		if(Speed <= (MaxSpeed / 3.9f))
-			Stalling = Mathf.Clamp(Stalling + 0.02f, 0f, 5f);
+		if(Speed <= (MaxSpeed / 3f))
+			Stalling = Mathf.Clamp(Stalling + 0.02f, 0f, 1f);
 
 		if(Stalling > 0f){
 			mainCanvas.Message(GS.SetText("You're stalling!", "Prędkość zbyt wysoka"), Color.red, new float[]{0.25f, 1f});
             Stalling -= 0.01f;
-			this.transform.position += Vector3.up * -0.1f;
-			this.transform.eulerAngles += new Vector3(Mathf.Lerp(0f, Stalling, AngleX*10f), 0f, 0f);
+			this.transform.eulerAngles += new Vector3(Mathf.Lerp(Stalling, 0f, AngleX), 0f, 0f);
 		}
 		// Stalling
 
+		// Bomb calculations
+		if(PresentType.Type == 2 && PresentCooldown <= 0f) LeadBomb(0, PresentCannonDistane);
+		else LeadBomb(0, 0f);
+		// Bomb calculations
+
+	}
+
+	void LeadBomb(int WhichBomb, float EffectiveRange){
+		Ray CheckPos = new (this.transform.position, (FlyingTowards * 2f * Speed/MaxSpeed) + Vector3.down);
+		if(Physics.Raycast(CheckPos, out RaycastHit CheckHit, EffectiveRange) && CheckHit.distance > 10f){
+			BombPositions[WhichBomb] = CheckHit.point;
+			BombShows[WhichBomb] = true;
+			BombGuis[WhichBomb].position = CheckHit.point + Vector3.up;
+			BombGuis[WhichBomb].forward = Vector3.up;
+			BombGuis[WhichBomb].localScale = Vector3.one/4f * Vector3.Distance(Camera.transform.position, BombGuis[WhichBomb].position);
+		} else {
+			BombShows[WhichBomb] = false;
+			if(BombGuis[WhichBomb].localScale.x > 0f) BombGuis[WhichBomb].localScale = Vector3.zero;
+		}
 	}
 
 	void Controlling() {
 
 		// Throttle
-		Throttle += Input.GetAxis ("Throttle") / 100f;
+		Throttle += GS.recInput("Throttle", 1) / 100f;
 		// Throttle
 
 		// Shooting
-		if(Input.GetButton("Fire")){
+		if(GS.recInput("Fire guns", 1) != 0){
 			if(GunCooldown <= 0f && Heat >= 0f){
                 if (WhichCamera == "Turret") {
 					Vector3 PickedPosition = Turret.transform.GetChild(0).GetChild(0).position;
@@ -725,13 +770,19 @@ public class PlayerScript : MonoBehaviour {
 					ShakePower = 0.1f;
 					ShakeDecay = 0.01f;
 				}
+				if(earProtection <= 0f) earProtection = Mathf.Clamp(GunCooldown-0.01f, 0.075f, Mathf.Infinity);
 			}
 		}
-		if(Input.GetButton("Present")){
+		if(GS.recInput("Fire a present", 1) != 0){
 			if(PresentCooldown <= 0f){
 				PresentCooldown = MaxPresentCooldown;
 
-				GameObject Present = Shoot(PresentType.Names[0], PresentCannon.transform.position, PresentCannon.transform, PresentCannon.transform.position + this.transform.forward);
+				if(PresentType.Type == 2){
+					if(BombShows[0]) Shoot(PresentType.Names[0], PresentCannon.transform.position, PresentCannon.transform, BombPositions[0]);
+					else mainCanvas.Message(GS.SetText("Cannot drop present like that!", "Nie można zrzucić prezentu w ten sposób!"), Color.red, new float[]{3f,1.5f}, "Overheating");
+				} else {
+					Shoot(PresentType.Names[0], PresentCannon.transform.position, PresentCannon.transform, PresentCannon.transform.position + this.transform.forward);
+				}
 
 				if(PresentType.Type == 0){
 					ShakePower = 1f;
@@ -739,7 +790,7 @@ public class PlayerScript : MonoBehaviour {
 				}
 			}
 		}
-		if(Input.GetButton("Special")){
+		if(GS.recInput("Use a special", 1) != 0){
             if (SpecialType.Names[0] == "None"){
 				mainCanvas.Message(GS.SetText("You don't have any specials!", "Nie masz żadnych specjalnych przedmiotów!"), Color.red, new float[]{3f, 1f});
 			}
@@ -747,10 +798,10 @@ public class PlayerScript : MonoBehaviour {
 				SpecialCooldown = MaxSpecialCooldown;
                 if(SpecialType.Names[0] == "Wrenches"){
 					Health += MaxHealth / 2f;
-					mainCanvas.Flash(Color.green, new float[]{0.5f, 1f});
+					mainCanvas.Flash(Color.green, new float[]{0.5f, 1f}, 0, 1);
 				} else if(SpecialType.Names[0] == "Fuel Tank"){
 					Fuel = MaxFuel;
-					mainCanvas.Flash(new Color(0f, 0.5f, 1f, 1f), new float[]{0.5f, 1f});
+					mainCanvas.Flash(new Color(0f, 0.5f, 1f, 1f), new float[]{0.5f, 1f}, 0, 1);
 				} else if(SpecialType.Names[0] == "Homing Missile"){
 					Shoot("Homing Missile", PresentCannon.transform.position + (this.transform.forward * 15f), PresentCannon.transform, PresentCannon.transform.position + this.transform.forward * 16f);
 				} else if(SpecialType.Names[0] == "Flares"){
@@ -758,6 +809,7 @@ public class PlayerScript : MonoBehaviour {
 					Bullet.transform.position = this.transform.position;
 					Bullet.GetComponent<SpecialScript> ().TypeofSpecial = "Flares";
 					Flares = 10f;
+					mainCanvas.Flash(new Color(1f, 0.5f, 0.5f, 1f), new float[]{Flares, 1f}, 1, 1);
 				} else if(SpecialType.Names[0] == "Brick"){
 					Shoot("Brick", this.transform.position, this.transform, this.transform.position + this.transform.forward);
                 }
@@ -771,7 +823,11 @@ public class PlayerScript : MonoBehaviour {
 		GameObject Bullet = Instantiate(Projectile) as GameObject;
         Bullet.transform.position = From;
         Bullet.transform.LookAt(There);
-		Bullet.GetComponent<ProjectileScript>().GunFirePos = GunFirePos;
+		if(earProtection > 0f) {
+			Bullet.GetComponent<ProjectileScript>().GunFirePos = null;
+		} else { 
+			Bullet.GetComponent<ProjectileScript>().GunFirePos = GunFirePos;
+		}
         Bullet.GetComponent<ProjectileScript>().WhoShot = this.gameObject;
         Bullet.GetComponent<ProjectileScript>().PreviusSpeed = Speed;
 		switch(TypeofGun){
@@ -821,7 +877,7 @@ public class PlayerScript : MonoBehaviour {
 		Health = MaxHealth;
 		Fuel = MaxFuel;
 		Heat = 0;
-		Speed = MaxSpeed;
+		Speed = FowardSpeed = MaxSpeed;
 
 
 	}
@@ -834,9 +890,9 @@ public class PlayerScript : MonoBehaviour {
 
 	public void Hurt(float Damage, int RedFlash, int PowerofShake){
 
-		Health -= Damage * (float)GS.DifficultyLevel;
-		if(RedFlash == 1)mainCanvas.Flash(Color.red, new float[]{0.25f, 0.5f});
-		else if(RedFlash == 2)mainCanvas.Flash(Color.red, new float[]{0.375f, 0.5f});
+		Health -= Damage * Mathf.Clamp(GS.Difficulty, 1f, 2f);
+		if(RedFlash == 1)mainCanvas.Flash(Color.red, new float[]{0.25f, 0.25f}, 0, 1);
+		else if(RedFlash == 2)mainCanvas.Flash(Color.red, new float[]{0.5f, 0.5f}, 0, 1);
 
 		if(PowerofShake == 1){
 			ShakePower = 1f;
@@ -897,7 +953,8 @@ public class PlayerScript : MonoBehaviour {
 
     private void OnTriggerStay(Collider Col){
 		if (Col.tag == "Cloud") {
-            Flares = 1f;
+            Flares = Mathf.Clamp(Flares + 0.04f, 0f, 3f);
+			mainCanvas.Flash(RenderSettings.fogColor, new float[]{Flares/2f, Flares}, -1);
         }
     }
 

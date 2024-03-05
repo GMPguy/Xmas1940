@@ -1,10 +1,12 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.PostProcessing;
 using UnityEngine.Windows.Speech;
 
 public class PlaneDead : MonoBehaviour {
 
+	GameScript GS;
 	public bool isMine = false;
 	public GameObject PlaneModel;
     public GameObject Parachuter;
@@ -23,11 +25,12 @@ public class PlaneDead : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 
+		GS = GameObject.Find("GameScript").GetComponent<GameScript>();
+
         if (isMine && IsGameOver == false) {
-            GameObject.Find("GameScript").GetComponent<GameScript>().GetComponent<GameScript>().SetGameOptions("Save", "TEST");
+            GS.SetGameOptions("Save", "SF" + GS.saveIndex);
         } else if (isMine && IsGameOver){
-			GameObject.Find("GameScript").GetComponent<GameScript>().GetComponent<GameScript>().SetGameOptions("Empty", "TEST");
-			GameObject.Find("GameScript").GetComponent<GameScript>().GetComponent<GameScript>().SetGameOptions("Erase", "TEST");
+			GS.SetGameOptions("Erase", "SF" + GS.saveIndex);
 		} else if (!isMine){
 			int[] maxDeads = new int[]{1, 4, 11, 101};
 			if(GameObject.FindGameObjectsWithTag("DeadPlane").Length >= maxDeads[QualitySettings.GetQualityLevel()]) 
@@ -59,14 +62,16 @@ public class PlaneDead : MonoBehaviour {
                 FreeTheParachuter -= 1;
             } else if(FreeTheParachuter == 1) {
                 Parachuter.transform.parent = null;
-                Parachuter.transform.position = this.transform.position;
+				Vector3 paraHere = this.transform.position;
+				paraHere.y = Mathf.Clamp(paraHere.y, 10f, Mathf.Infinity);
+                Parachuter.transform.position = paraHere;
                 Parachuter.GetComponent<AudioSource>().Play();
                 FreeTheParachuter = 0;
             } else {
                 if (Parachuter.transform.position.y > 0f) {
                     Parachuter.transform.localScale = Vector3.Slerp(Parachuter.transform.localScale, new Vector3(5f, 5f, 5f), 0.5f);
                     Parachuter.transform.eulerAngles = new Vector3(-90f, 0f, 0f);
-                    Parachuter.transform.Translate(0f, 0f, -0.25f);
+                    Parachuter.transform.position -= new Vector3(0f, 0.25f, 0);
                 } else {
                     Parachuter.transform.localScale = Vector3.Slerp(Parachuter.transform.localScale, new Vector3(5f, 5f, 0.5f), 0.5f);
                 }
@@ -78,8 +83,7 @@ public class PlaneDead : MonoBehaviour {
 				PreviousRotation = new Vector3(-1f, PreviousRotation.y, PreviousRotation.z / 10f);
 				if (GoBackToMenu > 0f) {
 					GoBackToMenu -= 0.01f;
-				} else {
-					this.transform.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, GoBackToMenu/5f);
+					this.transform.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, (GoBackToMenu-3f)/2f);
 				}
 			} else {
 				GameObject.Find ("MainCamera").transform.LookAt (this.transform.position, this.transform.up * 1f);
