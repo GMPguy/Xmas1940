@@ -281,7 +281,7 @@ public class MenuScript : MonoBehaviour {
 			string[] mainInfos = new string[]{"000000", "","","","","",""};
 			switch(WhichMain){
 				case "Main": 
-					if(GS.Build == "Web") mainInfos = new string[]{"111101", "Play", "Scores", "Options", "Credits", "", "Quit"};
+					if(GS.Build != "Web") mainInfos = new string[]{"111101", "Play", "Scores", "Options", "Credits", "", "Quit"};
 					else mainInfos = new string[]{"011110", "", "Play", "Scores", "Options", "Credits", ""};
 					break;
 				case "Play":
@@ -327,7 +327,7 @@ public class MenuScript : MonoBehaviour {
 							string fileName = "SF" + mb + "-" + GS.Version + "-" + GS.Build;
 							string[] Modes = new string[]{GS.SetText("Campaign", "Kampania"), GS.SetText("Endless", "Tryb bez końca"), GS.SetText("Skirmishes", "Tryb potyczek")};
 							if(PlayerPrefs.HasKey(fileName + "SavedGame")){
-								MainButtonTextes[mb].text = PlayerPrefs.GetString(fileName + "Name") + " - " + Modes[PlayerPrefs.GetInt(fileName + "Mode")] + " - " + PlayerPrefs.GetInt(fileName + "Level") + GS.SetText(" Level", " Poziom");
+								MainButtonTextes[mb].text = PlayerPrefs.GetString(fileName + "Name") + " - " + Modes[PlayerPrefs.GetInt(fileName + "Mode")] + " - " + GS.SetText("Level ", "Poziom ") + PlayerPrefs.GetInt(fileName + "Level");
 								if(Click == 1) {
 									SelectedFile = mb;
 									CurrentWindow[0] = "File";
@@ -411,8 +411,13 @@ public class MenuScript : MonoBehaviour {
 							GS.Difficulty = NGchosenDiff;
 							if(NGchosenMode == 0) GS.Parachutes = SetCampLives[NGchosenDiff];
 							else GS.Parachutes = SetLives[NGchosenDiff];
-							TimeUntilLoad = 5f;
-							WindowToLoad = "MainGame";
+							if(GS.GameMode != 2) {
+								TimeUntilLoad = 5f;
+								WindowToLoad = "MainGame";
+							} else {
+								CurrentWindow[0] = "CampaignMain";
+							}
+							
 						}
 						break;
 					case "Cancel":
@@ -538,6 +543,15 @@ public class MenuScript : MonoBehaviour {
 		            if (CMPlayButton.GetComponent<ButtonScript>().IsSelected == true) {
     		            WindowToLoad = "MainGame";
         		        TimeUntilLoad = Random.Range(1f, 3f);
+						if(GS.GameMode == 2){
+							GS.CurrentPlaneModel = (int)Random.Range(0f, IC.PlaneModels.Length-0.1f);
+				            GS.CurrentEngineModel = (int)Random.Range(0f, IC.EngineModels.Length-0.1f);
+				            GS.CurrentGunType = (int)Random.Range(0f, IC.Guns.Length-0.1f);
+				            GS.CurrentPresentCannonType = (int)Random.Range(0f, IC.Presents.Length-0.1f);
+				            GS.CurrentSpecialType = (int)Random.Range(0f, IC.Specials.Length-0.1f);
+				            GS.CurrentAddition = (int)Random.Range(0f, IC.Additions.Length-0.1f);
+				            GS.CurrentPaint = (int)Random.Range(0f, IC.Paints.Length-0.1f);
+						}
             		} else if (CMCustomizeButton.GetComponent<ButtonScript>().IsSelected == true) {
                 		CurrentWindow[0] = "CampaignCustomization";
 		            } else if (CMMessageButton.GetComponent<ButtonScript>().IsSelected == true) {

@@ -32,13 +32,13 @@ public class PlayerScript : MonoBehaviour {
 	// References
 
 	// Plane options
-	ItemClasses.PlaneModel PlaneModel;
-	ItemClasses.Engine EngineModel;
-	ItemClasses.Gun GunType;
-	ItemClasses.Present PresentType;
-	ItemClasses.Special SpecialType;
-	ItemClasses.Special Addition;
-	ItemClasses.Paint Paint;
+	public ItemClasses.PlaneModel PlaneModel;
+	public ItemClasses.Engine EngineModel;
+	public ItemClasses.Gun GunType;
+	public ItemClasses.Present PresentType;
+	public ItemClasses.Special SpecialType;
+	public ItemClasses.Special Addition;
+	public ItemClasses.Paint Paint;
 	// Plane options
 
 	// Stats
@@ -60,7 +60,7 @@ public class PlayerScript : MonoBehaviour {
 
 	public float MaxSpecialCooldown = 10f;
 	public float SpecialCooldown = 0f;
-	public int SpecialRequiredAmmo = 0;
+	public int SpecialCharges = 0;
 
 	public float MaxSpeed = 100f;
 	public float Speed = 0f;
@@ -120,16 +120,6 @@ public class PlayerScript : MonoBehaviour {
 		GS = GameObject.Find("GameScript").GetComponent<GameScript>();
 		IC = GS.GetComponent<ItemClasses>();
 		RS = GameObject.Find("RoundScript").GetComponent<RoundScript>();
-
-		if(GS.GameMode == 2){
-			GS.CurrentPlaneModel = (int)Random.Range(0f, IC.PlaneModels.Length-0.1f);
-            GS.CurrentEngineModel = (int)Random.Range(0f, IC.EngineModels.Length-0.1f);
-            GS.CurrentGunType = (int)Random.Range(0f, IC.Guns.Length-0.1f);
-            GS.CurrentPresentCannonType = (int)Random.Range(0f, IC.Presents.Length-0.1f);
-            GS.CurrentSpecialType = (int)Random.Range(0f, IC.Specials.Length-0.1f);
-            GS.CurrentAddition = (int)Random.Range(0f, IC.Additions.Length-0.1f);
-            GS.CurrentPaint = (int)Random.Range(0f, IC.Paints.Length-0.1f);
-		}
 
 		PlaneModel = IC.PlaneModels[GS.CurrentPlaneModel];
 		EngineModel = IC.EngineModels[GS.CurrentEngineModel];
@@ -416,7 +406,7 @@ public class PlayerScript : MonoBehaviour {
 
 		// Fuel
 		if(Throttle > 0f && EngineModel.Names[0] != "Magic Reindeer Dust")
-			Fuel -= Throttle / 100f * Mathf.Clamp(GS.Difficulty, 0f, 2f);
+			Fuel -= Throttle / 100f * Mathf.Clamp(GS.Difficulty, 1f, 2f);
 		// Fuel
 
 	}
@@ -702,13 +692,15 @@ public class PlayerScript : MonoBehaviour {
 		// Lift force
 
 		// Stalling
-		if(Speed <= (MaxSpeed / 3f))
+		float StallFactor = Mathf.Lerp(0.75f, 0f, AngleX);
+		if(Speed <= MaxSpeed * StallFactor)
 			Stalling = Mathf.Clamp(Stalling + 0.02f, 0f, 1f);
 
 		if(Stalling > 0f){
 			mainCanvas.Message(GS.SetText("You're stalling!", "Prędkość zbyt wysoka"), Color.red, new float[]{0.25f, 1f});
             Stalling -= 0.01f;
 			this.transform.eulerAngles += new Vector3(Mathf.Lerp(Stalling, 0f, AngleX), 0f, 0f);
+			this.transform.position += Vector3.down*Stalling/2f;
 		}
 		// Stalling
 
@@ -866,7 +858,7 @@ public class PlayerScript : MonoBehaviour {
 		MaxPresentCooldown = PresentType.Cooldown;
 
 		MaxSpecialCooldown = SpecialType.Cooldown;
-		SpecialRequiredAmmo = 1;
+		SpecialCharges = 1;
 
 		PlaneColor1 = Paint.Paints[0];
 		PlaneColor2 = Paint.Paints[1];

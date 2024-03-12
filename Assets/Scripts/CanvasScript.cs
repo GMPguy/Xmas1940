@@ -8,6 +8,7 @@ public class CanvasScript : MonoBehaviour {
 
 	// References
 	public GameScript GS;
+    ItemClasses IC;
     // While paused
     public bool isPaused = false;
     public float ShowBars = 0f;
@@ -20,15 +21,17 @@ public class CanvasScript : MonoBehaviour {
     public Camera MainCamera;
     public PlayerScript player;
 	public GameObject PlayerHud;
-	public Image HealthBar;
-	public Image FuelBar;
 	public Text Throttle;
 	public Text Speed;
 	public Text Altitude;
-	public Image GunCooldown;
-	public Image PresentCooldown;
-	public Image SpecialCooldown;
+
+    public Image HealthBar;
+	public Image FuelBar;
+	public Image[] GunCooldown;
+	public Image[] PresentCooldown;
+	public Image[] SpecialCooldown;
 	public Text AmmoText;
+
 	public Image Crosshair;
 	public Image PresentsHud;
 	public Text CurrentLevelText;
@@ -79,6 +82,7 @@ public class CanvasScript : MonoBehaviour {
 	void Start () {
 
         GS = GameObject.Find("GameScript").GetComponent<GameScript>();
+        IC = GS.GetComponent<ItemClasses>();
         RS = GameObject.Find("RoundScript").GetComponent<RoundScript>();
         player = GameObject.FindGameObjectWithTag("Player").GetComponent<PlayerScript>();
         MainCamera = GameObject.Find("MainCamera").GetComponent<Camera>();
@@ -94,6 +98,11 @@ public class CanvasScript : MonoBehaviour {
             case 20: IntroTextes[1] = GS.SetText("Watch out for the new Messerschmitt Me 262! These are Jets!", "Uważaj na nowego Messerschmitt Me 262! To są odrzutowce!"); break;
             default: IntroTextes[1] = GS.SetText("Deliver the presents!", "Dostarcz prezenty!"); break;
         }
+
+        // Set up icons
+        GunCooldown[0].sprite = GunCooldown[1].sprite = IC.Guns[GS.CurrentGunType].IconSprite;
+        PresentCooldown[0].sprite = PresentCooldown[1].sprite = IC.Presents[GS.CurrentPresentCannonType].IconSprite;
+        SpecialCooldown[0].sprite = SpecialCooldown[1].sprite = IC.Specials[GS.CurrentSpecialType].IconSprite;
 
     }
 
@@ -399,37 +408,34 @@ public class CanvasScript : MonoBehaviour {
                 RadarMap("Radar");
             }
 
-			if(player.GunCooldown <= 0f && (player.Heat >= 0)) {
-				GunCooldown.fillAmount = 1f;
-				GunCooldown.color = Color.Lerp( new Color (1f, 1f, 1f, 1f) , new Color(1f, 0f, 0f, 1f) , (player.Heat-(player.MaxHeat*0.75f)) / (player.MaxHeat*0.75f) );
-			} else {
-				GunCooldown.fillAmount = 1f - (player.GunCooldown / player.MaxGunCooldown);
-				GunCooldown.color = Color.Lerp( new Color (0.5f, 0.5f, 0.5f, 1f) , new Color(0.5f, 0f, 0f, 1f) , (player.Heat-(player.MaxHeat*0.75f)) / (player.MaxHeat*0.75f) );
-			}
-
-			if(player.PresentCooldown <= 0f) {
-				PresentCooldown.fillAmount = 1f;
-				PresentCooldown.color = new Color32 (255, 255, 255, 255);
-			} else {
-				PresentCooldown.fillAmount = 1f - (player.PresentCooldown / player.MaxPresentCooldown);
-				PresentCooldown.color = new Color32 (155, 155, 155, 255);
-			}
-
-			if(player.SpecialCooldown <= 0f){
-				SpecialCooldown.fillAmount = 1f;
-				SpecialCooldown.color = new Color32 (255, 255, 255, 255);
-			} else {
-				SpecialCooldown.fillAmount = 1f - (player.SpecialCooldown / player.MaxSpecialCooldown);
-				SpecialCooldown.color = new Color32 (155, 155, 155, 255);
-			}
-
-			AmmoText.text = GS.SetText("Heat: ", "Przegrzanie: ");
-            AmmoText.color = Color.Lerp( new Color (1f, 1f, 1f, 1f) , new Color(1f, 0f, 0f, 1f) , (player.Heat-(player.MaxHeat*0.75f)) / (player.MaxHeat*0.75f) );
-            for(float gh = 0f; gh < 1f; gh+=0.1f){
-                if(player.Heat >= 0f && gh > player.Heat / player.MaxHeat) AmmoText.text += ".";
-                else if(player.Heat <= -10f && gh > (player.Heat+10f)*-1f / player.MaxHeat) AmmoText.text += ".";
-                else AmmoText.text += "I";
+            if(player.HeatDispare < 9000f){
+                if(player.Heat >= 0){
+                    GunCooldown[0].color = Color.white;
+                    GunCooldown[1].color = Color.Lerp(new Color(1f, 0.75f, 0.75f, 1f), Color.red, player.Heat / player.MaxHeat);
+                    GunCooldown[1].fillAmount = player.Heat / player.MaxHeat;
+                } else {
+                    GunCooldown[0].color = Color.white/2f;
+                    GunCooldown[1].color = Color.red;
+                    GunCooldown[1].fillAmount = (player.Heat+10f) / -player.MaxHeat;
+                }
+            } else {
+                GunCooldown[0].color = Color.white/2f;
+                GunCooldown[1].color = Color.white;
+                if(player.Heat >= 0f) GunCooldown[1].fillAmount = 1f - (player.Heat / player.MaxHeat);
+                else GunCooldown[1].fillAmount = 0f;
             }
+
+            PresentCooldown[1].fillAmount = 1f - (player.PresentCooldown / player.MaxPresentCooldown);
+			if(player.PresentCooldown <= 0f) PresentCooldown[1].color = Color.white;
+			else PresentCooldown[1].color = Color.white*0.75f;
+
+			if(player.SpecialCharges > 0){
+				SpecialCooldown[1].fillAmount = 1f - (player.SpecialCooldown / player.MaxSpecialCooldown);
+		    	if(player.SpecialCooldown <= 0f) SpecialCooldown[1].color = Color.white;
+			    else SpecialCooldown[1].color = Color.white*0.75f;
+			} else {
+				SpecialCooldown[1].fillAmount = 0f;
+			}
 
 			if((player.Stalling > 0f) || (player.Speed >= (player.MaxSpeed * 1.75f))){
 				Speed.color = new Color32 (255, 0, 0, 255);

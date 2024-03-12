@@ -151,7 +151,7 @@ public class EnemyVesselScript : MonoBehaviour {
 		}
 		// Visual
 
-		if(this.transform.position.y < 0f) Health = 0f;
+		if(this.transform.position.y < -1f) Health = 0f;
 		
 	}
 
@@ -226,7 +226,7 @@ public class EnemyVesselScript : MonoBehaviour {
 
 		// Values
 		if (GunCooldown > 0f) GunCooldown -= 0.01f;
-		if (HitByAPlayer > 0f) {HitByAPlayer -= 0.01f; Scarred = true;}
+		if (HitByAPlayer > 0f) { if(Paintballed <= 0f) HitByAPlayer -= 0.01f; Scarred = true;}
         if (Paintballed > 0f) Paintballed -= 0.01f;
 		// Values
 
@@ -320,12 +320,13 @@ public class EnemyVesselScript : MonoBehaviour {
 		// Lift force
 
 		// Stalling
-		if(Speed <= (MaxSpeed / 3f))
+		float StallFactor = Mathf.Lerp(0.75f, 0f, AngleX);
+		if(Speed <= MaxSpeed * StallFactor)
 			Stalling = Mathf.Clamp(Stalling + 0.02f, 0f, 1f);
 
 		if(Stalling > 0f){
             Stalling -= 0.01f;
-			this.transform.position += Vector3.up * -0.1f; 
+			this.transform.position += Vector3.down*Stalling/2f;
 			this.transform.eulerAngles += new Vector3(Mathf.Lerp(Stalling, 0f, AngleX), 0f, 0f);
 		}
 		// Stalling

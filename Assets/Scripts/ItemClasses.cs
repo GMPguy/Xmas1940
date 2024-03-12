@@ -14,23 +14,26 @@ public class ItemClasses : MonoBehaviour {
     public Present[] Presents;
     public Special[] Additions;
     public Paint[] Paints;
+    public Sprite[] ItemIcons;
     // Categories
 
     abstract public class Item {
         public GameScript GS;
         public int Price;
+        public string Icon;
+        public Sprite IconSprite;
         public string[] Names;
         public string[] Desc;
         public int Category;
-        public Item(int sCategory, int sPrice, string[] sNames, string[] sDesc){
-            Category = sCategory; Price = sPrice; Names = sNames; Desc = sDesc;
+        public Item(int sCategory, int sPrice, string sIcon, string[] sNames, string[] sDesc){
+            Category = sCategory; Price = sPrice; Names = sNames; Desc = sDesc; Icon = sIcon;
         }
     }
 
     public class PlaneModel : Item{
         public int Class;
         public float Fuel, Health, Speed, RotationSpeed;
-        public PlaneModel(int sCategory, int sPrice, string[] sNames, string[] sDesc, float sFuel, float sHealth, float sRotationSpeed, float sSpeed, int sClass) : base(sCategory, sPrice, sNames, sDesc){
+        public PlaneModel(int sCategory, int sPrice, string sIcon, string[] sNames, string[] sDesc, float sFuel, float sHealth, float sRotationSpeed, float sSpeed, int sClass) : base(sCategory, sPrice, sIcon, sNames, sDesc){
             Fuel = sFuel; Health = sHealth; Speed = sSpeed; RotationSpeed = sRotationSpeed; Class = sClass;
             string[] pClasses = new string[]{"Fighter", "Bomber", "Striker", "Myśliwiec", "Bombowiec", "Szturmowiec"};
             Desc[0] = "Health: " + sHealth + "\nSpeed: " + sSpeed + "km/h\nTurning speed: " + sRotationSpeed + "\nClass: " + pClasses[sClass] + "\n\n" + sDesc[0]; 
@@ -40,7 +43,7 @@ public class ItemClasses : MonoBehaviour {
 
     public class Engine : Item{
         public float SpeedMultiplier;
-        public Engine(int sCategory, int sPrice, string[] sNames, string[] sDesc, float sSpeedMultiplier) : base(sCategory, sPrice, sNames, sDesc){
+        public Engine(int sCategory, int sPrice, string sIcon, string[] sNames, string[] sDesc, float sSpeedMultiplier) : base(sCategory, sPrice, sIcon, sNames, sDesc){
             SpeedMultiplier = sSpeedMultiplier;
             Desc[0] = "Speed multiplier: x" + sSpeedMultiplier + "\n\n" + sDesc[0];
             Desc[1] = "Mnożnik prędkości: x" + sSpeedMultiplier + "\n\n" + sDesc[1];
@@ -49,7 +52,7 @@ public class ItemClasses : MonoBehaviour {
 
     public class Special : Item{
         public float Cooldown;
-        public Special(int sCategory, int sPrice, string[] sNames, string[] sDesc, float sCooldown) : base(sCategory, sPrice, sNames, sDesc){
+        public Special(int sCategory, int sPrice, string sIcon, string[] sNames, string[] sDesc, float sCooldown) : base(sCategory, sPrice, sIcon, sNames, sDesc){
             Cooldown = sCooldown;
             if(sCooldown > 0f){
                 Desc[0] = "Cooldown: " + sCooldown + " seconds\n\n" + sDesc[0];
@@ -61,7 +64,7 @@ public class ItemClasses : MonoBehaviour {
     public class Gun : Item{
         public float Speed, Spread;
         public float[] Range, Damage, Cooldown;
-        public Gun(int sCategory, int sPrice, string[] sNames, string[] sDesc, float[] sRanges, float[] sCooldown, float[] sDamage, float sSpeed, float sSpread) : base(sCategory, sPrice, sNames, sDesc){
+        public Gun(int sCategory, int sPrice, string sIcon, string[] sNames, string[] sDesc, float[] sRanges, float[] sCooldown, float[] sDamage, float sSpeed, float sSpread) : base(sCategory, sPrice, sIcon, sNames, sDesc){
             Range = sRanges; Damage = sDamage; Cooldown = sCooldown; Speed = sSpeed; Spread = sSpread;
             string strDamage = sDamage[0].ToString(); if (sDamage[0] != sDamage[1]) strDamage += "-" + sDamage[1].ToString();
             string strRange = sRanges[0].ToString(); if (sRanges[0] != sRanges[1]) strRange += "-" + sRanges[1].ToString();
@@ -74,7 +77,7 @@ public class ItemClasses : MonoBehaviour {
     public class Present : Item{
         public int Type; // 0 Cannon, 1 Homing, 2 Drop
         public float Speed, Range, Cooldown;
-        public Present(int sCategory, int sPrice, string[] sNames, string[] sDesc, float sSpeed, float sRange, float sCooldown, int sType) : base(sCategory, sPrice, sNames, sDesc){
+        public Present(int sCategory, int sPrice, string sIcon, string[] sNames, string[] sDesc, float sSpeed, float sRange, float sCooldown, int sType) : base(sCategory, sPrice, sIcon, sNames, sDesc){
             Speed = sSpeed; Range = sRange; Cooldown = sCooldown; Type = sType;
             string[] strSpeed = {sSpeed + "km/h", sSpeed + "km/h"}; 
             if (sSpeed == 0) strSpeed = new string[]{"inherited", "dziedziczona"};
@@ -85,7 +88,7 @@ public class ItemClasses : MonoBehaviour {
 
     public class Paint : Item{
         public Color32[] Paints;
-        public Paint(int sCategory, int sPrice, string[] sNames, string[] sDesc, Color32[] nPaints) : base(sCategory, sPrice, sNames, sDesc){
+        public Paint(int sCategory, int sPrice, string sIcon, string[] sNames, string[] sDesc, Color32[] nPaints) : base(sCategory, sPrice, sIcon, sNames, sDesc){
             Paints = nPaints;
             Desc[0] = "First color: r" + nPaints[0].r + " g" + nPaints[0].g + " b" + nPaints[0].b + "\nSecond color: " + nPaints[1].r + " g" + nPaints[1].g + " b" + nPaints[1].b + "\n\n" + sDesc[0];
             Desc[1] = "Pierwszy kolor: r" + nPaints[0].r + " g" + nPaints[0].g + " b" + nPaints[0].b + "\nDrugi kolor: " + nPaints[1].r + " g" + nPaints[1].g + " b" + nPaints[1].b + "\n\n" + sDesc[1];
@@ -95,179 +98,179 @@ public class ItemClasses : MonoBehaviour {
     void Start(){
 
         PlaneModels = new PlaneModel[]{
-            new(0, 0,
+            new(0, 0, "plane_Placeholder",
                 new string[]{"BP Mark.I", "BP Mark.I"},
                 new string[]{"Desc", "Desc"},
                 180f, 100f, 1f, 150f, 0),
-            new(1, 0,
+            new(1, 1500, "plane_Placeholder",
                 new string[]{"BP Bomber V.I", "BP Bomber V.I"},
                 new string[]{"Desc", "Desc"},
                 200f, 200f, 0.75f, 100f, 1),
-            new(2, 0,
+            new(2, 1000, "plane_Placeholder",
                 new string[]{"Monobird Striker", "Monobird Striker"},
                 new string[]{"Desc", "Desc"},
                 100f, 75f, 0.75f, 200f, 2),
 
-            new(3, 0,
+            new(3, 3250, "plane_Placeholder",
                 new string[]{"Monobird B1", "Monobird B1"},
                 new string[]{"Desc", "Desc"},
                 100f, 75f, 0.75f, 200f, 1),
-            new(4, 0,
+            new(4, 3500, "plane_Placeholder",
                 new string[]{"PukeFlame", "PukeFlame"},
                 new string[]{"Desc", "Desc"},
                 110f, 100f, 0.75f, 300f, 2),
-            new(5, 0,
+            new(5, 3000, "plane_Placeholder",
                 new string[]{"Tornado", "Tornado"},
                 new string[]{"Desc", "Desc"},
                 200f, 150f, 1.25f, 180f, 0),
 
-            new(5, 0,
+            new(5, 4250, "plane_Placeholder",
                 new string[]{"Bob", "Bob"},
                 new string[]{"Desc", "Desc"},
                 500f, 500f, 0.5f, 200f, 1),
-            new(6, 0,
+            new(6, 5000, "plane_Placeholder",
                 new string[]{"Falcon G2", "Falcon G2"},
                 new string[]{"Desc", "Desc"},
                 200f, 200f, 1.5f, 200f, 0),
-            new(7, 0,
+            new(7, 4500, "plane_Placeholder",
                 new string[]{"Falcon Dart", "Falcon Dart"},
                 new string[]{"Desc", "Desc"},
                 150f, 150f, 0.5f, 300f, 2),
 
-            new(8, 0,
+            new(8, 5000, "plane_Placeholder",
                 new string[]{"SP Albatross", "SP Albatross"},
                 new string[]{"Desc", "Desc"},
                 500f, 750f, 0.35f, 250f, 1),
-            new(9, 0,
+            new(9, 6000, "plane_Placeholder",
                 new string[]{"SP Arrow", "SP Arrow"},
                 new string[]{"Desc", "Desc"},
                 150f, 175f, 0.5f, 400f, 2),
-            new(10, 0,
+            new(10, 6750, "plane_Placeholder",
                 new string[]{"SP Eagle", "SP Eagle"},
                 new string[]{"Desc", "Desc"},
                 250f, 250f, 1.25f, 250f, 0),
 
-            new(11, 0,
+            new(11, 3000, "plane_Placeholder",
                 new string[]{"Stolen Messerschmitt", "Skradziony Messerschmitt"},
                 new string[]{"Desc", "Desc"},
                 200f, 150f, 1f, 180f, 0),
-            new(12, 0,
+            new(12, 4000, "plane_Placeholder",
                 new string[]{"Stolen Messerschmitt 110", "Skradziony Messerschmitt 110"},
                 new string[]{"Desc", "Desc"},
                 100f, 100f, 1f, 200f, 2),
-            new(13, 0,
+            new(13, 5000, "plane_Placeholder",
                 new string[]{"Stolen Messerschmitt Me 262", "Skradziony Messerschmitt Me 262"},
                 new string[]{"Desc", "Desc"},
                 100f, 100f, 0.5f, 400f, 2)
         };
 
         EngineModels = new Engine[]{
-            new(0, 0,
+            new(0, 0, "engine_Propeller",
                 new string[]{"Basic Propeller", "Zwykłe śmigło"},
                 new string[]{"Desc", "Desc"}, 1f),
-            new(1, 0,
+            new(1, 1000, "engine_Propeller",
                 new string[]{"Double Propeller", "Podwójne śmigło"},
                 new string[]{"Desc", "Desc"}, 1.25f),
-            new(2, 0,
+            new(2, 2500, "engine_JetEngine",
                 new string[]{"Jet Engine", "Silnik odrzutowy"},
                 new string[]{"Desc", "Desc"}, 1.5f),
-            new(3, 0,
+            new(3, 3500, "engine_JetEngine",
                 new string[]{"Double Jet Engine", "Podwójny silnik odrzutowy"},
                 new string[]{"Desc", "Desc"}, 1.75f),
-            new(4, 0,
+            new(4, 5000, "engine_MagicReindeerDust",
                 new string[]{"Magic Reindeer Dust", "Magiczny pył dla reniferów"},
                 new string[]{"Desc", "Desc"}, 2f)
         };
 
         Specials = new Special[]{
-            new(0, 0,
+            new(0, 0, "None",
                 new string[]{"None", "Brak"},
                 new string[]{"Desc", "Desc"}, 0.1f),
-            new(1, 0,
+            new(1, 1000, "addition_Wrenches",
                 new string[]{"Wrenches", "Klucze"},
                 new string[]{"Desc", "Desc"}, 10f),
-            new(2, 0,
+            new(2, 500, "addition_FuelTank",
                 new string[]{"Fuel Tank", "Kanister z paliwem"},
                 new string[]{"Desc", "Desc"}, 10f),
-            new(3, 0,
+            new(3, 5000, "addition_HommingMissile",
                 new string[]{"Homing Missile", "Pocisk samonaprowadzający"},
                 new string[]{"Desc", "Desc"}, 30f),
-            new(4, 0,
+            new(4, 100, "addition_Brick",
                 new string[]{"Brick", "Cegła"},
                 new string[]{"Desc", "Desc"}, 10f),
-            new(5, 0,
+            new(5, 2000, "addition_Flares",
                 new string[]{"Flares", "Flary"},
                 new string[]{"Desc", "Desc"}, 30f),
         };
 
         Guns = new Gun[]{
-            new(0, 0,
+            new(0, 0, "gun_Vickers",
                 new string[]{"Vickers", "Vickers"},
                 new string[]{"Desc", "Desc"},
                 new float[]{400f, 400f},
                 new float[]{0.1f, 3f, 5},
                 new float[]{5f, 20f}, 1000f, 1f),
-            new(1, 0,
+            new(1, 500, "gun_Browning",
                 new string[]{"M2 Browning", "M2 Browning"},
                 new string[]{"Desc", "Desc"},
                 new float[]{600f, 600f},
                 new float[]{0.075f, 3f, 5f},
                 new float[]{15f, 20f}, 1250f, 0.5f),
-            new(2, 0,
+            new(2, 1000, "gun_Browning",
                 new string[]{"M3 Browning", "M3 Browning"},
                 new string[]{"Desc", "Desc"},
                 new float[]{600f, 600f},
                 new float[]{0.075f, 5f, 5f},
                 new float[]{20f, 50f}, 1500f, 0.25f),
-            new(3, 0,
+            new(3, 1250, "gun_Cannon",
                 new string[]{"Cannon", "Armaty"},
                 new string[]{"Desc", "Desc"},
                 new float[]{300f, 300f},
                 new float[]{0.2f, 5f, 6f},
                 new float[]{50f, 100f}, 750f, 0f),
-            new(4, 0,
+            new(4, 1250, "gun_Flammable",
                 new string[]{"Flammable", "Pociski palące"},
                 new string[]{"Desc", "Desc"},
                 new float[]{400f, 400f},
                 new float[]{0.1f, 3f, 5f},
                 new float[]{5f, 15f}, 1000f, 0.5f),
-            new(5, 0,
+            new(5, 1250, "gun_MuggerMissiles",
                 new string[]{"Mugger Missiles", "Pociski kradnące"},
                 new string[]{"Desc", "Desc"},
                 new float[]{400f, 400f},
                 new float[]{0.1f, 3f, 5f},
                 new float[]{5f, 15f}, 1000f, 0.5f),
-            new(6, 0,
+            new(6, 3000, "gun_Flak",
                 new string[]{"Flak", "Pociski przeciwlotnicze"},
                 new string[]{"Desc", "Desc"},
                 new float[]{750f, 1250f},
                 new float[]{0.4f, 30f, 9999f},
                 new float[]{100f, 200f}, 1000f, 0f),
-            new(7, 0,
+            new(7, 4000, "gun_JetGun",
                 new string[]{"Jet Gun", "Broń odrzutowców"},
                 new string[]{"Desc", "Desc"},
                 new float[]{1000f, 1000f},
                 new float[]{0.05f, 7.5f, 5f},
                 new float[]{20f, 50f}, 2000f, 0.25f),
-            new(8, 0,
+            new(8, 4500, "gun_Laser",
                 new string[]{"Laser", "Laser"},
                 new string[]{"Desc", "Desc"},
                 new float[]{500f, 500f},
-                new float[]{0.075f, 15f, 0f},
+                new float[]{0.075f, 15f, 9999f},
                 new float[]{5f, 20f}, 0f, 0f),
-            new(9, 0,
+            new(9, 6000, "gun_LaserBlue",
                 new string[]{"Blue Laser", "Niebieski laser"},
                 new string[]{"Desc", "Desc"},
                 new float[]{1000f, 1000f},
-                new float[]{0.075f, 15f, 0f},
+                new float[]{0.075f, 15f, 9999f},
                 new float[]{15f, 20f}, 0f, 0f),
-            new(10, 0,
+            new(10, 2250, "gun_Balls",
                 new string[]{"Paintball", "Paintball"},
                 new string[]{"Desc", "Desc"},
                 new float[]{600f, 600f},
                 new float[]{0.1f, 5f, 10f},
                 new float[]{5f, 15f}, 1000f, 1f),
-            new(11, 0,
+            new(11, 7500, "gun_Rocket",
                 new string[]{"Rocket", "Rakieta"},
                 new string[]{"Desc", "Desc"},
                 new float[]{600f, 600f},
@@ -276,116 +279,135 @@ public class ItemClasses : MonoBehaviour {
         };
 
         Presents = new Present[]{
-            new(0, 0,
+            new(0, 0, "present_Dropping",
                 new string[]{"Dropped Present", "Zrzucany prezent"},
                 new string[]{"Desc", "Desc"},
                 0f, 2000f, 5f, 2),
-            new(1, 0,
+            new(1, 100, "present_Present",
                 new string[]{"Slingshot", "Slingshot"},
                 new string[]{"Desc", "Desc"},
                 0f, 400f, 10f, 0),
-            new(2, 0,
+            new(2, 500, "present_Present",
                 new string[]{"Present Cannon", "Armata na prezenty"},
                 new string[]{"Desc", "Desc"},
                 1000f, 1000f, 10f, 0),
-            new(3, 0,
+            new(3, 500, "present_Dropping",
                 new string[]{"Carpet Presents", "Prezenty dywanowe"},
                 new string[]{"Desc", "Desc"},
                 0f, 2000f, 1f, 2),
-            new(4, 0,
+            new(4, 2000, "present_Present",
                 new string[]{"Sniper Rifle", "Karabin snajperski"},
                 new string[]{"Desc", "Desc"},
                 1000f, 10000f, 30f, 0),
-            new(5, 0,
+            new(5, 5000, "present_Aiming",
                 new string[]{"Homing Present", "Samonaprowadzający prezent"},
                 new string[]{"Desc", "Desc"},
                 0f, 500f, 30f, 1),
         };
 
         Additions = new Special[]{
-            new(0, 0,
+            new(0, 0, "None",
                 new string[]{"None", "Brak"},
                 new string[]{"Desc", "Desc"}, 0f),
-            new(1, 0,
+            new(1, 100, "special_Zoom",
                 new string[]{"Zoom", "Przybliżenie"},
                 new string[]{"Desc", "Desc"}, 0f),
-            new(2, 0,
+            new(2, 500, "special_Boost",
                 new string[]{"Boost", "Przyśpieszenie"},
                 new string[]{"Desc", "Desc"}, 0f),
-            new(3, 0,
+            new(3, 500, "special_Damper",
                 new string[]{"Damper", "Zderzak"},
                 new string[]{"Desc", "Desc"}, 0f),
-            new(4, 0,
+            new(4, 2000, "special_Turret",
                 new string[]{"Turret", "Wieżyczka"},
                 new string[]{"Desc", "Desc"}, 0f),
-            new(5, 0,
+            new(5, 1500, "special_AmmoPack",
                 new string[]{"Ammo Pack", "Paczka z ammunicją"},
                 new string[]{"Desc", "Desc"}, 0f),
         };
 
         Paints = new Paint[]{
-            new(0, 0,
+            new(0, 0, "None",
                 new string[]{"Basic Paint", "Podstawowa farba"},
                 new string[]{"Desc", "Desc"},
                 new Color32[]{ new(200, 200, 200, 255), new(200, 100, 100, 255)
                 }),
-            new(1, 0,
+            new(1, 100, "None",
                 new string[]{"Present Colors", "Kolory prezentowe"},
                 new string[]{"Desc", "Desc"},
                 new Color32[]{ new(55, 200, 55, 255), new(200, 55, 55, 255)
                 }),
-            new(2, 0,
+            new(2, 100, "None",
                 new string[]{"Monochrome", "Monochromowy"},
                 new string[]{"Desc", "Desc"},
                 new Color32[]{ new(100, 100, 100, 255), new(55, 55, 55, 255)
                 }),
-            new(3, 0,
+            new(3, 100, "None",
                 new string[]{"Night", "Noc"},
                 new string[]{"Desc", "Desc"},
                 new Color32[]{ new(0, 100, 200, 255), new(5, 5, 55, 255)
                 }),
-            new(4, 0,
+            new(4, 100, "None",
                 new string[]{"War Paint", "Kamuflaż"},
                 new string[]{"Desc", "Desc"},
                 new Color32[]{ new(100, 175, 0, 255), new(55, 75, 55, 255)
                 }),
-            new(5, 0,
+            new(5, 100, "None",
                 new string[]{"Toy Paint", "Zabawkowa farba"},
                 new string[]{"Desc", "Desc"},
                 new Color32[]{ new(0, 100, 200, 255), new(200, 0, 0, 255)
                 }),
-            new(6, 0,
+            new(6, 100, "None",
                 new string[]{"Girly", "Dziewczęcy"},
                 new string[]{"Desc", "Desc"},
                 new Color32[]{ new(200, 0, 200, 255), new(100, 0, 100, 255)
                 }),
-            new(7, 0,
+            new(7, 100, "None",
                 new string[]{"Black and White", "Czarnobiały"},
                 new string[]{"Desc", "Desc"},
                 new Color32[]{ new(225, 225, 225, 255), new(5, 5, 5, 255)
                 }),
-            new(8, 0,
+            new(8, 100, "None",
                 new string[]{"Royal", "Szlachetny"},
                 new string[]{"Desc", "Desc"},
                 new Color32[]{ new(0, 75, 255, 255), new(255, 255, 0, 255)
                 }),
-            new(9, 0,
+            new(9, 100, "None",
                 new string[]{"Aggressive", "Agresywny"},
                 new string[]{"Desc", "Desc"},
                 new Color32[]{ new(200, 0, 0, 255), new(5, 5, 5, 255)
                 }),
-            new(10, 0,
+            new(10, 100, "None",
                 new string[]{"Desert", "Pustynny"},
                 new string[]{"Desc", "Desc"},
                 new Color32[]{ new(255, 240, 220, 255), new(155, 115, 85, 255)
                 }),
-            new(11, 0,
+            new(11, 1000, "None",
                 new string[]{"Rich", "Bogaty"},
                 new string[]{"Desc", "Desc"},
                 new Color32[]{ new(255, 255, 255, 255), new(255, 190, 0, 255)
                 }),
         };
 
+        foreach(PlaneModel a in PlaneModels) setSprite(a);
+        foreach(Engine a in EngineModels) setSprite(a);
+        foreach(Gun a in Guns) setSprite(a);
+        foreach(Present a in Presents) setSprite(a);
+        foreach(Special a in Specials) setSprite(a);
+        foreach(Special a in Additions) setSprite(a);
+        foreach(Paint a in Paints) setSprite(a);
+
+    }
+
+    void setSprite(Item target){
+        for(int ss = 0; ss <= ItemIcons.Length; ss ++){
+            if(ss == ItemIcons.Length){
+                Debug.LogError("No item icon of name " + target.Icon + " found!");
+            } else if (ItemIcons[ss].name == target.Icon) {
+                target.IconSprite = ItemIcons[ss];
+                break;
+            }
+        }
     }
 
     public Gun ReceiveGunType(string Name){

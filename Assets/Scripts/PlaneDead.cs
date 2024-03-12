@@ -57,8 +57,8 @@ public class PlaneDead : MonoBehaviour {
 	// Update is called once per frame
 	void FixedUpdate () {
 
-        if ((isMine && IsGameOver == false && Spec != "Leave") || (!isMine && Time.timeSinceLevelLoad % 1f < 0.3f && this.transform.position.y > 100f)) {
-            if (FreeTheParachuter > 1) {
+        if ((isMine && IsGameOver == false && Spec != "Leave") || (!isMine)) {
+            if (FreeTheParachuter > 1 && this.transform.position.y > 1f) {
                 FreeTheParachuter -= 1;
             } else if(FreeTheParachuter == 1) {
                 Parachuter.transform.parent = null;

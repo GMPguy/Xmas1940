@@ -434,13 +434,11 @@ public class GameScript : MonoBehaviour {
 					if(saveKB.theBind.Length == 2) BindsToSave += saveKB.theBind[0].ToString() + "-" + saveKB.theBind[1].ToString() + ";";
 					else BindsToSave += saveKB.theBind[0] + ";";
 				}
-				print("Saved key binds " + BindsToSave);
 				PlayerPrefs.SetString("SavedBinds", BindsToSave);
 				break;
 			case "Load":
 				if(PlayerPrefs.HasKey("SavedBinds")){
 					string BindsLoaded = PlayerPrefs.GetString("SavedBinds");
-					print("Loaded key binds " + BindsLoaded);
 					string[] blTemp = {"", ""};
 					int Flip = 0;
 					int Index = 0;
